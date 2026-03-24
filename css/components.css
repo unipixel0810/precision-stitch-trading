@@ -1,0 +1,255 @@
+/**
+ * Precision Stitch — buttons, cards, inputs, ticker, modal, table
+ */
+
+/* —— Buttons —— */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3-5) var(--space-6);
+  font-family: var(--font-body);
+  font-size: var(--text-title-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.btn--primary {
+  background: var(--gradient-primary);
+  color: var(--color-on-primary);
+  box-shadow: none;
+}
+
+.btn--primary:hover {
+  filter: brightness(1.06);
+}
+
+.btn--primary:focus-visible {
+  outline: none;
+  border-left: var(--stitch-focus);
+}
+
+.btn--secondary {
+  background: transparent;
+  color: var(--color-on-background);
+  border: 1px solid rgb(132 147 150 / 20%);
+  box-shadow: none;
+}
+
+.btn--secondary:hover {
+  background-color: var(--color-surface-bright);
+}
+
+.btn--secondary:focus-visible {
+  outline: none;
+  border-left: var(--stitch-focus);
+}
+
+/* —— Cards (no divider lines; tonal nesting) —— */
+.card {
+  background-color: var(--color-surface-container-high);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  border: none;
+  box-shadow: none;
+}
+
+.card--raised {
+  background-color: var(--color-surface-container-highest);
+}
+
+.card__well {
+  background-color: var(--color-surface-container-lowest);
+  border-radius: var(--radius-sm);
+  padding: var(--space-6);
+  margin-top: var(--space-6);
+}
+
+.card-stack > * + * {
+  margin-top: var(--space-8);
+}
+
+/* —— Inputs —— */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field__label {
+  font-family: var(--font-body);
+  font-size: var(--text-label-sm);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--color-on-surface-variant);
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-3-5) var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--color-on-background);
+  background-color: var(--color-surface-container-highest);
+  border: none;
+  border-radius: var(--radius-sm);
+  border-bottom: 2px solid transparent;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.input::placeholder {
+  color: var(--color-on-surface-variant);
+}
+
+.input:focus {
+  outline: none;
+  background-color: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface-container-highest));
+  border-bottom-color: var(--color-primary-container);
+  box-shadow: none;
+}
+
+.input:focus-visible {
+  border-left: var(--stitch-focus);
+}
+
+/* Fallback if color-mix unsupported */
+@supports not (background-color: color-mix(in srgb, red 5%, blue)) {
+  .input:focus {
+    background-color: var(--color-surface-container-highest);
+  }
+}
+
+/* —— Ticker “Silk Ribbon” —— */
+.ticker {
+  overflow: hidden;
+  background-color: var(--color-surface-container-lowest);
+  border-radius: var(--radius-sm);
+  padding-block: var(--space-3);
+}
+
+.ticker__track {
+  display: flex;
+  gap: var(--space-8);
+  width: max-content;
+  animation: ticker-scroll 28s linear infinite;
+}
+
+.ticker__item {
+  font-family: var(--font-body);
+  font-size: var(--text-label-md);
+  white-space: nowrap;
+  color: var(--color-on-surface-variant);
+}
+
+.ticker__symbol {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--color-on-background);
+  margin-right: var(--space-2);
+}
+
+.ticker__change--gain {
+  color: var(--color-primary-container);
+}
+
+.ticker__change--neutral {
+  color: var(--color-tertiary-container);
+}
+
+.ticker__change--loss {
+  color: var(--color-error-container);
+}
+
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* —— Glass modal —— */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-8);
+  background: rgb(0 0 0 / 40%);
+}
+
+.modal {
+  max-width: 28rem;
+  width: 100%;
+  padding: var(--space-8);
+  border-radius: var(--radius-lg);
+  background: var(--color-glass-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-ambient);
+  border: none;
+}
+
+/* —— Data table (ghost border) —— */
+.table-wrap {
+  overflow: auto;
+  border-radius: var(--radius-sm);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: var(--text-label-md);
+}
+
+.data-table th,
+.data-table td {
+  padding: var(--space-3-5) var(--space-4);
+  text-align: left;
+  border-bottom: var(--ghost-border);
+}
+
+.data-table th {
+  font-family: var(--font-display);
+  font-size: var(--text-label-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-on-surface-variant);
+}
+
+.data-table td {
+  color: var(--color-on-background);
+}
+
+/* —— Chip (internal sm radius) —— */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-label-sm);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-container-lowest);
+  color: var(--color-on-surface-variant);
+}
+
+.chip--active {
+  border-left: var(--stitch-focus);
+  color: var(--color-primary-container);
+}

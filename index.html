@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Precision Stitch — Design System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/tokens.css" />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <style>
+      .chart-panel {
+        min-height: 14rem;
+        border-radius: var(--radius-lg);
+        background:
+          linear-gradient(
+            180deg,
+            rgb(20 20 20 / 90%) 0%,
+            var(--color-surface-container-lowest) 100%
+          ),
+          repeating-linear-gradient(
+            90deg,
+            transparent 0,
+            transparent 47px,
+            rgb(59 73 76 / 8%) 47px,
+            rgb(59 73 76 / 8%) 48px
+          );
+        background-color: var(--color-surface-container-lowest);
+      }
+
+      .price-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--space-4);
+      }
+
+      .price-row .headline-lg {
+        margin: 0;
+      }
+
+      .price-row .label-md {
+        color: var(--color-primary-container);
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3-5);
+        margin-top: var(--space-8);
+      }
+
+      dialog.modal {
+        border: none;
+        color: inherit;
+      }
+
+      dialog.modal::backdrop {
+        background: rgb(0 0 0 / 40%);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ticker" aria-hidden="true">
+      <div class="ticker__track">
+        <span class="ticker__item"
+          ><span class="ticker__symbol">NVDA</span
+          ><span class="ticker__change ticker__change--gain">+2.4%</span></span
+        >
+        <span class="ticker__item"
+          ><span class="ticker__symbol">TSLA</span
+          ><span class="ticker__change ticker__change--neutral">0.0%</span></span
+        >
+        <span class="ticker__item"
+          ><span class="ticker__symbol">AMD</span
+          ><span class="ticker__change ticker__change--gain">+1.1%</span></span
+        >
+        <span class="ticker__item"
+          ><span class="ticker__symbol">SPY</span
+          ><span class="ticker__change ticker__change--loss">−0.3%</span></span
+        >
+        <span class="ticker__item"
+          ><span class="ticker__symbol">NVDA</span
+          ><span class="ticker__change ticker__change--gain">+2.4%</span></span
+        >
+        <span class="ticker__item"
+          ><span class="ticker__symbol">TSLA</span
+          ><span class="ticker__change ticker__change--neutral">0.0%</span></span
+        >
+        <span class="ticker__item"
+          ><span class="ticker__symbol">AMD</span
+          ><span class="ticker__change ticker__change--gain">+1.1%</span></span
+        >
+        <span class="ticker__item"
+          ><span class="ticker__symbol">SPY</span
+          ><span class="ticker__change ticker__change--loss">−0.3%</span></span
+        >
+      </div>
+    </div>
+
+    <main class="app-shell">
+      <section class="section">
+        <div class="modular-stack modular-stack--hero">
+          <div class="hero-value">
+            <p class="label-sm meta">총 자산</p>
+            <p class="display-sm">₩128,450,200</p>
+            <div class="price-row">
+              <span class="headline-lg">오늘</span>
+              <span class="label-md">+0.82%</span>
+            </div>
+            <div class="toolbar">
+              <button type="button" class="btn btn--primary">주문 실행</button>
+              <button type="button" class="btn btn--secondary">전략 편집</button>
+              <span class="chip chip--active">모의투자</span>
+              <span class="chip">저변동성</span>
+            </div>
+          </div>
+          <div>
+            <p class="label-sm meta" style="margin-bottom: var(--space-3)">포트폴리오 추세</p>
+            <div class="chart-panel" role="img" aria-label="차트 영역 플레이스홀더"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="card-stack">
+          <article class="card">
+            <h2 class="headline-lg">체결 · 최근</h2>
+            <p class="label-md meta" style="margin-top: var(--space-2)">타임스탬프 및 실행가는 Inter 라벨 스케일</p>
+            <div class="card__well">
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>시간</th>
+                      <th>종목</th>
+                      <th>가격</th>
+                      <th>상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="label-sm">09:31:02</td>
+                      <td class="symbol-text">AAPL</td>
+                      <td>₩198,200</td>
+                      <td><span class="label-md" style="color: var(--color-primary-container)">체결</span></td>
+                    </tr>
+                    <tr>
+                      <td class="label-sm">09:28:55</td>
+                      <td class="symbol-text">MSFT</td>
+                      <td>₩512,000</td>
+                      <td><span class="label-md meta">대기</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </article>
+
+          <article class="card card--raised">
+            <h2 class="headline-lg">빠른 입력</h2>
+            <div class="card-stack" style="margin-top: var(--space-8)">
+              <div class="field">
+                <label class="field__label" for="symbol">종목 코드</label>
+                <input class="input" id="symbol" type="text" placeholder="예: 005930" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label class="field__label" for="qty">수량</label>
+                <input class="input" id="qty" type="number" min="1" placeholder="0" />
+              </div>
+            </div>
+            <p class="label-sm meta" style="margin-top: var(--space-8)">
+              포커스 시 하단 스티치(2px) + primary 5% 틴트 — design.md §5
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <p class="label-sm meta">
+        <button type="button" class="btn btn--secondary" id="open-modal">글래스 모달 예시</button>
+      </p>
+    </main>
+
+    <dialog class="modal" id="demo-modal" aria-labelledby="modal-title">
+      <h2 class="headline-lg" id="modal-title">오버레이</h2>
+      <p class="label-md meta" style="margin-top: var(--space-4)">
+        surface-variant 60% + backdrop-blur 20px · ambient shadow
+      </p>
+      <div style="margin-top: var(--space-8)">
+        <button type="button" class="btn btn--primary" id="close-modal">닫기</button>
+      </div>
+    </dialog>
+
+    <script>
+      const dialog = document.getElementById("demo-modal");
+      document.getElementById("open-modal").addEventListener("click", () => dialog.showModal());
+      document.getElementById("close-modal").addEventListener("click", () => dialog.close());
+    </script>
+  </body>
+</html>

@@ -1,0 +1,79 @@
+/**
+ * Precision Stitch — design tokens (see design.md)
+ */
+
+:root {
+  /* —— Colors: surface hierarchy —— */
+  --color-surface: #131313;
+  --color-surface-container-lowest: #141414;
+  --color-surface-container-low: #1c1b1b;
+  --color-surface-container: #252525;
+  --color-surface-container-high: #2a2a2a;
+  --color-surface-container-highest: #363636;
+  --color-surface-bright: #3a4043;
+  --color-surface-variant: #2a3234;
+
+  /* —— Brand & semantic —— */
+  --color-primary: #c3f5ff;
+  --color-primary-container: #00e5ff;
+  --color-on-primary: #003238;
+  --color-tertiary-container: #fec931;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad4;
+
+  /* —— Text (no pure white) —— */
+  --color-on-background: #e5e2e1;
+  --color-on-surface: #e5e2e1;
+  --color-on-surface-variant: #bac9cc;
+
+  /* —— Lines & outlines —— */
+  --color-outline: #849396;
+  --color-outline-variant: #3b494c;
+
+  /* —— Glass overlay —— */
+  --color-glass-surface: rgb(42 50 52 / 60%);
+
+  /* —— Primary gradient (135°) —— */
+  --gradient-primary: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-primary-container) 100%
+  );
+
+  /* —— Spacing scale (custom; not blind 8px) —— */
+  --space-1: 0.25rem;
+  --space-2: 0.4375rem;
+  --space-3: 0.625rem;
+  --space-3-5: 0.875rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 1.75rem;
+  --space-10: 2.25rem;
+  --space-12: 2.75rem;
+
+  /* —— Radius —— */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+
+  /* —— Typography —— */
+  --font-display: "Manrope", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  --text-label-sm: 0.6875rem;
+  --text-label-md: 0.8125rem;
+  --text-title-sm: 0.875rem;
+  --text-body: 0.9375rem;
+  --text-headline-lg: 1.75rem;
+  --text-display-sm: 2.25rem;
+
+  /* —— Elevation: ambient shadow (tooltips, floats) —— */
+  --shadow-ambient: 0 12px 32px rgb(0 0 0 / 45%);
+
+  /* —— Ghost border (tables) —— */
+  --ghost-border: 1px solid rgb(59 73 76 / 15%);
+
+  /* —— Focus “stitch” —— */
+  --stitch-focus: 1px dashed rgb(0 229 255 / 30%);
+}
