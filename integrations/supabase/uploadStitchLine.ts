@@ -27,8 +27,11 @@ export function createStitchSupabaseClient(): SupabaseClient {
   return createClient(url, key);
 }
 
-/** 단일 테넌트: 종목당 활성 전략 1개 upsert 후 라인 insert */
-export async function uploadStitchLine(
+/**
+ * 차트에서 선 생성/수정 시: 전략 확보 후 (strategy_id, line_type) 기준 upsert.
+ * Realtime 리스너는 같은 테이블을 구독하면 갱신을 받습니다.
+ */
+export async function syncStitchToSupabase(
   client: SupabaseClient,
   stockCode: string,
   lineData: StitchLinePayload,
@@ -49,15 +52,21 @@ export async function uploadStitchLine(
   if (strategyError) throw strategyError;
   if (!strategy?.id) throw new Error('active_strategies upsert returned no id');
 
-  const { error: lineError } = await client.from('trading_lines').insert({
-    strategy_id: strategy.id,
-    line_type: lineData.type,
-    price: lineData.price,
-    is_manual: true,
-    label: lineData.label ?? null,
-  });
+  const { error: lineError } = await client.from('trading_lines').upsert(
+    {
+      strategy_id: strategy.id,
+      line_type: lineData.type,
+      price: lineData.price,
+      label: lineData.label ?? null,
+      is_manual: true,
+    },
+    { onConflict: 'strategy_id,line_type' },
+  );
 
   if (lineError) throw lineError;
 
   return { strategyId: strategy.id };
 }
+
+/** @deprecated 이름만 다름 — syncStitchToSupabase와 동일 */
+export const uploadStitchLine = syncStitchToSupabase;

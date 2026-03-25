@@ -22,7 +22,8 @@ create table if not exists public.trading_lines (
   price numeric not null,
   is_manual boolean not null default true,
   label text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint trading_lines_strategy_line_type_uniq unique (strategy_id, line_type)
 );
 
 create index if not exists idx_trading_lines_strategy_id
