@@ -2,6 +2,8 @@
 
 키움 OpenAPI+는 **Windows 필수**이므로 AWS/IDC **Windows Server 2022** 등에서 아래를 점검합니다.
 
+**Mac + Parallels:** 맥북에서 Windows VM으로 돌리는 경우는 [PARALLELS_DESKTOP_KIWOOM.md](./PARALLELS_DESKTOP_KIWOOM.md)를 참고하세요.
+
 ## ① 서버 환경 (Infrastructure)
 
 - **절전·절전 매드**: 제어판 → 전원 옵션 → 절전 **해제**, 디스크 끄기 최소화.
