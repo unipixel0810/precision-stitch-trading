@@ -24,6 +24,11 @@ except ImportError:  # pragma: no cover
 
 from krx_price_grid import adjust_line_for_latency_buy, snap_price_to_tick
 
+try:
+    from stitch_telegram_notifier import StitchTelegramNotifier
+except ImportError:  # pragma: no cover
+    StitchTelegramNotifier = None  # type: ignore[misc, assignment]
+
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -72,12 +77,17 @@ class StitchServerEngine:
     """로그·모니터링용 관측 지연(ms)."""
 
     db: Client | None = None
+    telegram: Any | None = None
+    """StitchTelegramNotifier 또는 None. None이면 TELEGRAM_* 환경 변수로 자동 생성 시도."""
+
     _stop: bool = field(default=False, repr=False)
     _line_arm: dict[str, LineArmState] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
         if self.db is None:
             self.db = _make_supabase()
+        if self.telegram is None and StitchTelegramNotifier is not None:
+            self.telegram = StitchTelegramNotifier.try_from_env()
         raw_lt = os.environ.get("STITCH_BUY_LATENCY_TICKS", "").strip()
         if raw_lt.isdigit():
             self.buy_latency_ticks = int(raw_lt)
@@ -100,13 +110,27 @@ class StitchServerEngine:
         """SendOrder 등 실주문. 미연동 시 로그만."""
         print(f"[주문훅] {code} {side} ({order_type})")
 
-    def update_db_after_trade(self, strategy_id: str, fill_price: float, line: dict[str, Any]) -> None:
+    def update_db_after_trade(
+        self,
+        strategy_id: str,
+        fill_price: float,
+        line: dict[str, Any],
+        *,
+        stock_code: str = "",
+    ) -> None:
         """
         체결 후 DB 정리. 스키마에 맞게 확장하세요 (체결 로그 테이블 insert 등).
         기본: active_strategies.updated_at 갱신.
+        TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 가 있으면 매수 체결 알림.
         """
         _ = line
         self.db.table("active_strategies").update({"updated_at": _utc_now_iso()}).eq("id", strategy_id).execute()
+        if self.telegram and stock_code:
+            try:
+                self.telegram.send_buy_fill_notice(stock_code, float(fill_price))
+            except Exception as e:  # pragma: no cover
+                print(f"[telegram] 알림 실패: {e!r}")
+
 
     def _line_key(self, strategy_id: str, line: dict[str, Any]) -> str:
         lid = line.get("id")
@@ -148,7 +172,7 @@ class StitchServerEngine:
 
         if current_px <= effective_buy:
             self.execute_kiwoom_order(code, "BUY", "시장가")
-            self.update_db_after_trade(strategy_id, current_px, line)
+            self.update_db_after_trade(strategy_id, current_px, line, stock_code=code)
             st.armed = False
 
     def fetch_active_strategies(self) -> list[dict[str, Any]]:
