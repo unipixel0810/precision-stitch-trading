@@ -22,13 +22,24 @@ final class LoadDashboardBundle {
   final SymbolCode _symbol;
 
   Future<DashboardBundle> call() async {
-    final hits = await _scanner.listHits();
-    final ohlc = await _chart.getOhlc(_symbol);
-    final lines = await _chart.listPriceLines(_symbol);
-    final bg = await _chart.backgroundImage(_symbol);
-    final status = await _auto.getStatus();
-    final risk = await _auto.getRiskSettings();
-    final tel = await _telemetry.getTelemetry();
+    final results = await Future.wait<Object?>(<Future<Object?>>[
+      _scanner.listHits(),
+      _chart.getOhlc(_symbol),
+      _chart.listPriceLines(_symbol),
+      _chart.backgroundImage(_symbol),
+      _auto.getStatus(),
+      _auto.getRiskSettings(),
+      _telemetry.getTelemetry(),
+    ]);
+
+    final hits = results[0]! as List<ScannerHit>;
+    final ohlc = results[1]! as OhlcSnapshot;
+    final lines = results[2]! as List<ChartPriceLine>;
+    final bg = results[3] as Uri?;
+    final status = results[4]! as AutoWatchStatus;
+    final risk = results[5]! as RiskSettings;
+    final tel = results[6]! as SessionTelemetry;
+
     return DashboardBundle(
       scannerHits: hits,
       selectedSymbol: _symbol,

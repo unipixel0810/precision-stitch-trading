@@ -5,7 +5,7 @@
 ## Phase 2 — Application
 
 - `lib/application/models/dashboard_bundle.dart` — 대시보드 읽기 스냅샷.
-- `lib/application/use_cases/load_dashboard_bundle.dart` — 포트 조합으로 번들 로드.
+- `lib/application/use_cases/load_dashboard_bundle.dart` — 포트 조합으로 번들 로드(독립 호출 **병렬** `Future.wait`).
 - `lib/application/use_cases/update_risk_settings.dart` — 리스크 설정 저장.
 
 ## Phase 3 — Presentation + Fake backend
@@ -16,7 +16,7 @@
 
 ## Phase 4 — Infrastructure (HTTP 계약)
 
-- `lib/infrastructure/api/*` — `ApiConfig`(`API_BASE_URL`, `API_KEY`), `DashboardHttpClient`, JSON 매퍼·예외.
+- `lib/infrastructure/api/*` — `ApiConfig`(`API_BASE_URL`, `API_KEY`), `DashboardHttpClient` + `HttpRetryPolicy`, JSON 매퍼·예외.
 - `lib/infrastructure/remote/*` — 위 클라이언트로 REST 호출. 계약: `docs/PHASE4_HTTP_CONTRACT.md`.
 - 스테이징/프로덕션: **`--dart-define=API_BASE_URL=https://...`** 필수(미설정 시 `ApiNotConfiguredException`).
 
@@ -38,6 +38,7 @@
 - 스모크: `test/widget_test.dart` — `StitchTraderApp` + `AutoTrader` 헤더.
 - Application: `test/application/use_cases_test.dart` — `LoadDashboardBundle`, `UpdateRiskSettings` (Fake Port).
 - Infra: `test/infrastructure/dashboard_json_mapper_test.dart` — REST JSON 매핑.
+- Infra: `test/infrastructure/http_retry_policy_test.dart` — 503 재시도·404 비재시도.
 - 릴리즈 전: `flutter analyze`, `flutter test`, 수동 3패널 회귀.
 
 ## Legacy 제거

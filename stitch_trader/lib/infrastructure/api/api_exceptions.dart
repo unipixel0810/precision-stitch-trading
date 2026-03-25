@@ -22,6 +22,10 @@ final class HttpResponseException implements Exception {
   final int statusCode;
   final String body;
 
+  /// 타임아웃·과부하·게이트웨이 오류 등 재시도 가치가 있는 응답.
+  bool get isTransient =>
+      statusCode == 408 || statusCode == 429 || (statusCode >= 500 && statusCode <= 599);
+
   @override
   String toString() => 'HttpResponseException: $statusCode ${body.length > 200 ? "${body.substring(0, 200)}…" : body}';
 }

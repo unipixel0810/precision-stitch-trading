@@ -9,6 +9,14 @@
 - **Content-Type:** 요청 본문 JSON은 `application/json; charset=utf-8`.
 - **응답:** 성공 시 `2xx` + JSON 본문. 오류 시 UI에 상태코드·본문 일부가 표시될 수 있음.
 
+### 클라이언트 동작 (앱 측)
+
+- **병렬 로드:** `LoadDashboardBundle` 유스케이스가 스캐너·차트·자동감시·텔레메트리 Port 호출을 `Future.wait`로 묶어 **왕복 지연을 줄임**(단, 한 Port라도 실패하면 전체 실패).
+- **재시도:** `DashboardHttpClient`는 `HttpRetryPolicy`로 **최대 3회**(첫 시도 포함)까지 재시도한다.
+  - 재시도 대상: `TimeoutException`, `SocketException`, `ClientException`, HTTP **408 / 429 / 5xx**.
+  - **4xx**(위에 해당하지 않는 경우)는 재시도하지 않는다.
+  - backoff: 250ms 시작 지수 증가(×2).
+
 ## 엔드포인트
 
 ### `GET /v1/scanner/hits`
@@ -115,5 +123,7 @@
 ## 구현 참조
 
 - HTTP: `lib/infrastructure/api/dashboard_http_client.dart`
+- 재시도: `lib/infrastructure/api/http_retry_policy.dart`
 - 매핑: `lib/infrastructure/api/dashboard_json_mapper.dart`
 - 예외: `lib/infrastructure/api/api_exceptions.dart`
+- 번들 조립: `lib/application/use_cases/load_dashboard_bundle.dart` (병렬 `Future.wait`)
