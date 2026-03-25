@@ -12,6 +12,7 @@
 
 - **키움 자동 로그인**: 매 영업일 **08:30** 전후 OpenAPI+ 로그인·모듈 업데이트 자동화 스크립트(별도) 가동 여부.
 - **로그인 스모크**: `analytics/kiwoom_pyqt_login.py` (PyQt5, `requirements-kiwoom.txt`) 로 CommConnect·계좌 조회 확인.
+- **계좌 → Supabase**: `analytics/kiwoom_account_sync.py` + 테이블 `kiwoom_accounts` (마이그레이션 `20250331100000_kiwoom_accounts.sql`).
 - **Supabase**: 서버에 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` 설정. `.env` 사용 시 프로세스 시작 전 로드.
 - **Telegram(선택)**: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` — 체결 알림(`stitch_telegram_notifier.py`).
 - **방화벽**: 출발 Supabase/키움 서버 포트 허용.
