@@ -21,6 +21,7 @@ from stitch_analytics_engine import StitchAnalyticsEngine
 from trade_history_analytics import (
     calculate_performance_metrics,
     compare_feb_march_performance,
+    march_pf_drop_averaging_failure_analysis,
     summarize_march_large_stops,
 )
 
@@ -71,10 +72,12 @@ def main() -> None:
 
     metrics = calculate_performance_metrics(df)
     feb_mar = compare_feb_march_performance(df, year=args.year)
+    averaging = march_pf_drop_averaging_failure_analysis(df, year=args.year)
     stop_blob = summarize_march_large_stops(df, threshold_pct=-12.0)
 
     print("[지표]", metrics)
     print("[2·3월 비교]", feb_mar)
+    print("[3월 평단가 조절 관점]", averaging["summary_ko"])
 
     if args.no_llm:
         return
@@ -84,6 +87,7 @@ def main() -> None:
         metrics,
         feb_mar,
         march_large_stop_summary=stop_blob,
+        march_averaging_summary=averaging["summary_ko"],
         latency_ms=args.latency_ms,
     )
     print("\n--- AI Coaching Report ---\n")

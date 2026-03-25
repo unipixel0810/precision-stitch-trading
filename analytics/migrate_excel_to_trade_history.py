@@ -35,6 +35,11 @@ def _client():
     return create_client(url, key)
 
 
+def get_supabase_client():
+    """다른 스크립트에서 재사용."""
+    return _client()
+
+
 _COL_ALIASES: dict[str, str] = {
     "종목명": "stock_name",
     "종목": "stock_name",
@@ -111,29 +116,29 @@ def _coerce_status(series: pd.Series) -> pd.Series:
     return pd.Series(out, index=series.index)
 
 
-def compute_volume_cliff(df: pd.DataFrame) -> pd.Series:
+def compute_volume_cliff(df: pd.DataFrame, *, min_return_pct: float = 3.0) -> pd.Series:
     """
-    익절(또는 수익>0)인데 거래량이 기준 대비 크게 줄어든 경우 True.
-    - volume_ref & volume 모두 있으면: volume <= 0.35 * volume_ref
-    - volume 만 있으면: 종목별 중앙 거래량 대비 volume < 0.30 * median_volume_symbol
+    수익률이 min_return_pct 이상인 종목만 후보로 두고, 거래량 급감(절벽) 패턴이면 True.
+    - volume_ref & volume: volume <= 0.35 * volume_ref
+    - volume 만: 종목별 중앙 거래량 대비 volume < 0.30 * median_volume_symbol
     """
-    win = (df["status"] == "익절") | (df["return_pct"] > 0)
+    high_return = pd.to_numeric(df["return_pct"], errors="coerce") >= float(min_return_pct)
     cliff = pd.Series(False, index=df.index)
 
     if "volume" in df.columns and "volume_ref" in df.columns:
         vol = pd.to_numeric(df["volume"], errors="coerce")
         ref = pd.to_numeric(df["volume_ref"], errors="coerce")
-        mask = win & ref.notna() & vol.notna() & (ref > 0) & (vol <= ref * 0.35)
+        mask = high_return & ref.notna() & vol.notna() & (ref > 0) & (vol <= ref * 0.35)
         cliff = cliff | mask
     elif "volume" in df.columns:
         vol = pd.to_numeric(df["volume"], errors="coerce")
         med = df.groupby("stock_name")["volume"].transform(lambda s: pd.to_numeric(s, errors="coerce").median())
-        mask = win & med.notna() & vol.notna() & (med > 0) & (vol <= med * 0.30)
+        mask = high_return & med.notna() & vol.notna() & (med > 0) & (vol <= med * 0.30)
         cliff = cliff | mask.fillna(False)
     return cliff
 
 
-def read_trades(path: str, sheet: int | str = 0) -> pd.DataFrame:
+def read_trades(path: str, sheet: int | str = 0, *, cliff_min_return_pct: float = 3.0) -> pd.DataFrame:
     path_lower = path.lower()
     if path_lower.endswith(".csv"):
         raw = pd.read_csv(path)
@@ -151,7 +156,7 @@ def read_trades(path: str, sheet: int | str = 0) -> pd.DataFrame:
     for col in ("volume", "volume_ref"):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
-    df["is_volume_cliff"] = compute_volume_cliff(df)
+    df["is_volume_cliff"] = compute_volume_cliff(df, min_return_pct=cliff_min_return_pct)
     if "notes" not in df.columns:
         df["notes"] = None
     return df
@@ -189,11 +194,17 @@ def main() -> None:
     ap.add_argument("--sheet", default="0", help="엑셀 시트 인덱스(숫자) 또는 시트 이름")
     ap.add_argument("--batch", type=int, default=300)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--cliff-min-pct",
+        type=float,
+        default=3.0,
+        help="is_volume_cliff 후보 최소 수익률(%%). 기본 3%%",
+    )
     args = ap.parse_args()
 
     raw_sheet = args.sheet
     sheet: int | str = int(raw_sheet) if str(raw_sheet).isdigit() else raw_sheet
-    df = read_trades(args.file, sheet=sheet)
+    df = read_trades(args.file, sheet=sheet, cliff_min_return_pct=args.cliff_min_pct)
     rows = to_records(df)
     print(f"rows={len(rows)} dry_run={args.dry_run}")
     if args.dry_run:

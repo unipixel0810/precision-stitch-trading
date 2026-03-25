@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -128,6 +129,7 @@ class StitchAnalyticsEngine:
         feb_march: dict[str, Any],
         *,
         march_large_stop_summary: str,
+        march_averaging_summary: str = "",
         latency_ms: float = 14.0,
         model: str = "gpt-4o-mini",
     ) -> str:
@@ -143,17 +145,23 @@ class StitchAnalyticsEngine:
         mar = feb_march.get("march")
         delta = feb_march.get("delta_profit_factor")
         win_pct = metrics["win_rate"] * 100
+        averaging_blob = march_averaging_summary.strip() or "(생략)"
 
         prompt = f"""
 당신은 Stitch 트레이딩 시스템의 AI 애널리스트입니다. 한국어로 **구조화된 리포트**를 작성하세요.
 반드시 아래 **세 가지 소제목**을 순서대로 포함하고, 각 소제목 아래 2~5문단으로 분석하세요.
 
+**반드시 다음 취지를 본문에 녹여낼 것:**
+- 사용자 수익 DNA인 **'거래량 절벽 후 지지 확인'** 매매: 데이터상 승률이 높다면(예: 70% 이상) 그 유효성을 명시.
+- **아모레퍼시픽(-15%)급 대형 손절**이 전체 수익을 갉아먹는 구조라면, **Stitch 3차 매수 후 시가 이탈 시 즉시 손절**·**Kiwoom 0624** 환경에서 **규칙 강제** 필요성을 설명.
+- 지연 **{latency_ms:.0f}ms**로 인한 슬리피지를 **약 0.1~0.2%** 수준으로 가정해 언급하고, **매수 타점을 1틱 더 낮게** 잡을 것을 권고.
+
 ## 1) 사용자의 현재 수익 DNA인 '세력봉 중심선 지지' 전략의 유효성 검증
 - 전체 지표(승률·손익비·기댓값)와 2월 대비 3월 성과 저하가 전략 실패인지 시장·실행 문제인지 구분하세요.
 
-## 2) 3월에 발생한 -15%급 대형 손절의 원인 분석 및 Stitch Controller의 SL(손절) 자동 조정 제안
-- 아래 요약된 대형 손절 사례를 근거로 원인 후보(변동성, 체결 지연, SL 과대·과소 등)를 쓰고,
-  **구체적인 SL 퍼센트 또는 ATR 배수 조정안**(예: 기본 SL 1.2% → 제안값)을 제시하세요.
+## 2) 3월 손익비 하락(2월 대비 PF가 약 0.97로 내려간 경우 등) — **평단가 조절 실패** 관점
+- 아래 [평단가·꼬리 손실 휴리스틱]을 근거로 3월에 무엇이 달랐는지 설명하세요.
+- 대형 손절 사례와 연결해 Stitch Controller **SL** 조정·**시가 이탈 기계 손절**을 구체적으로 제안하세요.
 
 ## 3) 지연시간 {latency_ms:.0f}ms를 고려했을 때, 실제 체결 오차(Slippage)가 수익률에 미친 영향 평가
 - 초단타/세력봉 터치 전략에서 {latency_ms:.0f}ms가 체결가를 얼마나 밀 수 있는지 정성+간단 정량 가정으로 평가하세요.
@@ -169,6 +177,9 @@ class StitchAnalyticsEngine:
 - 2월: {feb}
 - 3월: {mar}
 - PF 차이(2월-3월): {delta}
+
+[평단가·꼬리 손실 휴리스틱(데이터 기반 요약)]
+{averaging_blob}
 
 [3월 대형 손절 요약]
 {march_large_stop_summary}
@@ -186,6 +197,66 @@ class StitchAnalyticsEngine:
             temperature=0.5,
         )
         return (response.choices[0].message.content or "").strip()
+
+    def suggest_tp_sl_percentages(
+        self,
+        metrics: dict[str, float],
+        feb_march: dict[str, Any],
+        *,
+        march_averaging_summary: str,
+        coaching_excerpt: str = "",
+        default_tp: float = 3.5,
+        default_sl: float = 1.2,
+        model: str = "gpt-4o-mini",
+    ) -> dict[str, Any]:
+        """
+        JSON: { "tp_percent": float, "sl_percent": float, "rationale_ko": string }
+        active_strategies.tp_percent / sl_percent 반영용.
+        """
+        if self._client is None:
+            return {
+                "tp_percent": default_tp,
+                "sl_percent": max(0.9, default_sl - 0.15),
+                "rationale_ko": "OpenAI 미설정: 보수적으로 SL 소폭 타이트.",
+            }
+
+        schema_hint = '{"tp_percent": 3.2, "sl_percent": 1.0, "rationale_ko": "..."}'
+        user = f"""
+Stitch Trader 위험 설정 제안. 출력은 **JSON 한 개만**(다른 텍스트 금지).
+tp_percent: 목표 익절 % (보통 2.8~4.0), sl_percent: 손절 % 양수 (보통 0.85~1.35).
+3월 PF가 2월보다 나쁘면 SL을 약간 타이트하게.
+
+현재 기본값 TP={default_tp}%, SL={default_sl}%.
+지표: {metrics}
+2·3월: {feb_march}
+평단가 휴리스틱: {march_averaging_summary}
+리포트 요지(참고): {coaching_excerpt[:1200] if coaching_excerpt else "(없음)"}
+
+스키마 예시: {schema_hint}
+""".strip()
+
+        response = self._client.chat.completions.create(
+            model=model,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": "Output only valid JSON. Numbers for tp_percent and sl_percent."},
+                {"role": "user", "content": user},
+            ],
+            temperature=0.2,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        try:
+            data = json.loads(raw)
+            tp = float(data["tp_percent"])
+            sl = float(data["sl_percent"])
+            rationale = str(data.get("rationale_ko", ""))
+            return {"tp_percent": tp, "sl_percent": sl, "rationale_ko": rationale}
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            return {
+                "tp_percent": default_tp,
+                "sl_percent": max(0.9, default_sl - 0.15),
+                "rationale_ko": "JSON 파싱 실패 — 기본값 유지·SL만 소폭 타이트.",
+            }
 
 
 if __name__ == "__main__":
