@@ -22,6 +22,8 @@ except ImportError:  # pragma: no cover
     Client = Any  # type: ignore[misc, assignment]
     create_client = None  # type: ignore[misc, assignment]
 
+from krx_price_grid import adjust_line_for_latency_buy, snap_price_to_tick
+
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -62,6 +64,13 @@ class StitchServerEngine:
     rearm_ratio: float = 0.001
     """선 가격 대비 이 비율만큼 위로 올라오면 재무장(다음 터치 허용)."""
 
+    use_tick_snap: bool = True
+    """현재가·기준선을 KRX 호가 단위로 스냅."""
+    buy_latency_ticks: int = 1
+    """지연·슬리피지 보정: 매수 기준선을 N틱 낮춤(환경 STITCH_BUY_LATENCY_TICKS 로 덮어쓰기 가능)."""
+    latency_ms_observed: float = 14.0
+    """로그·모니터링용 관측 지연(ms)."""
+
     db: Client | None = None
     _stop: bool = field(default=False, repr=False)
     _line_arm: dict[str, LineArmState] = field(default_factory=dict, repr=False)
@@ -69,6 +78,15 @@ class StitchServerEngine:
     def __post_init__(self) -> None:
         if self.db is None:
             self.db = _make_supabase()
+        raw_lt = os.environ.get("STITCH_BUY_LATENCY_TICKS", "").strip()
+        if raw_lt.isdigit():
+            self.buy_latency_ticks = int(raw_lt)
+        raw_ms = os.environ.get("STITCH_LATENCY_MS", "").strip()
+        if raw_ms:
+            try:
+                self.latency_ms_observed = float(raw_ms)
+            except ValueError:
+                pass
 
     def request_stop(self) -> None:
         self._stop = True
@@ -106,23 +124,31 @@ class StitchServerEngine:
         if line.get("line_type") != "BUY":
             return
         try:
-            threshold = float(line["price"])
+            raw_line = float(line["price"])
         except (TypeError, ValueError):
             return
+
+        threshold = snap_price_to_tick(raw_line) if self.use_tick_snap else raw_line
+        effective_buy = (
+            adjust_line_for_latency_buy(threshold, self.buy_latency_ticks)
+            if self.buy_latency_ticks > 0 and self.use_tick_snap
+            else threshold
+        )
+        current_px = snap_price_to_tick(current) if self.use_tick_snap else current
 
         key = self._line_key(strategy_id, line)
         st = self._line_arm.setdefault(key, LineArmState())
 
-        if current > threshold * (1.0 + self.rearm_ratio):
+        if current_px > threshold * (1.0 + self.rearm_ratio):
             st.armed = True
             return
 
         if not st.armed:
             return
 
-        if current <= threshold:
+        if current_px <= effective_buy:
             self.execute_kiwoom_order(code, "BUY", "시장가")
-            self.update_db_after_trade(strategy_id, current, line)
+            self.update_db_after_trade(strategy_id, current_px, line)
             st.armed = False
 
     def fetch_active_strategies(self) -> list[dict[str, Any]]:

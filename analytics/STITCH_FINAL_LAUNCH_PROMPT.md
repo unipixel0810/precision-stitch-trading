@@ -45,3 +45,7 @@ python stitch_final_launch.py --analyze-remote --apply-risk
 ---
 
 구현 파일: `migrate_excel_to_trade_history.py`, `trade_history_analytics.py`, `stitch_analytics_engine.py`, `stitch_final_launch.py`, 마이그레이션 `supabase/migrations/20250329000000_active_strategies_tp_sl.sql`.
+
+---
+
+**AI 에이전트용 한 줄 명령 전체 본문:** [`STITCH_FINAL_AGENT_COMMAND.md`](./STITCH_FINAL_AGENT_COMMAND.md)
