@@ -10,6 +10,7 @@
 | ☐ | 다계정·모의/실전 스위처 | `TradingSessionContext`, `EnvironmentRepository` | |
 | ☐ | 주문 확인 다이얼로그·2FA | `OrderDraft`, `ConfirmOrder` 유스케이스 (P2) | |
 | ☐ | 차트 도구 프로필 저장 | `ChartToolProfile` 엔티티, `ChartContextRepository` 확장 | |
+| ☐ | Smart Money / 매물대 / Base Line | `docs/SMART_MONEY_STITCH_LOGIC.md` — 스캐너·차트 오버레이·손절 트리거 | |
 | ☐ | 키움 장애·지연 Degraded UI 상태 | `SessionTelemetry` 확장, `HealthRepository` | |
 
 **체크된 항목**은 다음 Phase 계획에 반드시 기입할 것.
