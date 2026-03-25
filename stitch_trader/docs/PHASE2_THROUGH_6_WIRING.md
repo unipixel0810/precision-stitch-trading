@@ -14,9 +14,11 @@
 - `lib/infrastructure/fake/*` — 개발용 Fake 구현체.
 - 진입 조립: `lib/main.dart` → `DashboardRepositoryFactory.create(development)` → `DashboardModule.fromRepositories`.
 
-## Phase 4 — Infrastructure (실연동 자리)
+## Phase 4 — Infrastructure (HTTP 계약)
 
-- `lib/infrastructure/remote/*` — `UnimplementedError` 스텁. `AppEnvironment.staging|production`에서 주입.
+- `lib/infrastructure/api/*` — `ApiConfig`(`API_BASE_URL`, `API_KEY`), `DashboardHttpClient`, JSON 매퍼·예외.
+- `lib/infrastructure/remote/*` — 위 클라이언트로 REST 호출. 계약: `docs/PHASE4_HTTP_CONTRACT.md`.
+- 스테이징/프로덕션: **`--dart-define=API_BASE_URL=https://...`** 필수(미설정 시 `ApiNotConfiguredException`).
 
 ## Phase 5 — DI · 환경
 
@@ -29,12 +31,13 @@
 
 `main.dart`에서 `--dart-define=APP_ENV=staging` 또는 `production` 으로 주입한다. 미지정 시 `development`(Fake 저장소).
 
-- **staging / production:** 현재 `remote/*` 저장소는 `UnimplementedError` 등으로 실패할 수 있음 → 대시보드 **전면 오류 + 다시 시도**, 리스크 저장·새로고침 실패 시 **SnackBar**.
+- **staging / production:** 백엔드가 `PHASE4_HTTP_CONTRACT.md` 미준수·네트워크 실패 시 **전면 오류 + 다시 시도**; 부분 새로고침·저장 실패는 **SnackBar**.
 
 ## Phase 6 — QA
 
 - 스모크: `test/widget_test.dart` — `StitchTraderApp` + `AutoTrader` 헤더.
 - Application: `test/application/use_cases_test.dart` — `LoadDashboardBundle`, `UpdateRiskSettings` (Fake Port).
+- Infra: `test/infrastructure/dashboard_json_mapper_test.dart` — REST JSON 매핑.
 - 릴리즈 전: `flutter analyze`, `flutter test`, 수동 3패널 회귀.
 
 ## Legacy 제거

@@ -1,5 +1,6 @@
 // 진입점: composition root에서 환경별 저장소 → DashboardModule → 화면 주입.
-// 레이어 규칙은 루트 rule.md, 기준선은 docs/PHASE0_BASELINE.md 참고.
+// staging/production REST: --dart-define=APP_ENV=staging --dart-define=API_BASE_URL=https://...
+// 계약: stitch_trader/docs/PHASE4_HTTP_CONTRACT.md
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:stitch_trader/app/app_environment.dart';

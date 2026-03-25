@@ -1,3 +1,5 @@
+import 'package:stitch_trader/infrastructure/api/api_config.dart';
+import 'package:stitch_trader/infrastructure/api/dashboard_http_client.dart';
 import 'package:stitch_trader/infrastructure/fake/fake_auto_watch_repository.dart';
 import 'package:stitch_trader/infrastructure/fake/fake_chart_context_repository.dart';
 import 'package:stitch_trader/infrastructure/fake/fake_scanner_repository.dart';
@@ -22,11 +24,13 @@ abstract final class DashboardRepositoryFactory {
         );
       case AppEnvironment.staging:
       case AppEnvironment.production:
+        final api = ApiConfig.fromEnvironment();
+        final httpClient = DashboardHttpClient(config: api);
         return DashboardRepositories(
-          scanner: const RemoteScannerRepository(),
-          chart: const RemoteChartContextRepository(),
-          autoWatch: const RemoteAutoWatchRepository(),
-          telemetry: const RemoteSessionTelemetryRepository(),
+          scanner: RemoteScannerRepository(httpClient),
+          chart: RemoteChartContextRepository(httpClient),
+          autoWatch: RemoteAutoWatchRepository(httpClient),
+          telemetry: RemoteSessionTelemetryRepository(httpClient),
         );
     }
   }

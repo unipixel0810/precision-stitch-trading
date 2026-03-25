@@ -1,10 +1,15 @@
 import 'package:stitch_trader/domain/dashboard_contracts.dart';
+import 'package:stitch_trader/infrastructure/api/dashboard_http_client.dart';
+import 'package:stitch_trader/infrastructure/api/dashboard_json_mapper.dart';
 
 final class RemoteSessionTelemetryRepository implements SessionTelemetryRepository {
-  const RemoteSessionTelemetryRepository();
+  RemoteSessionTelemetryRepository(this._client);
+
+  final DashboardHttpClient _client;
 
   @override
   Future<SessionTelemetry> getTelemetry() async {
-    throw UnimplementedError('RemoteSessionTelemetryRepository.getTelemetry');
+    final json = await _client.getJson('/v1/session/telemetry');
+    return DashboardJsonMapper.parseTelemetry(json);
   }
 }
