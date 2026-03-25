@@ -19,6 +19,14 @@ abstract final class DashboardRepositoryFactory {
   }) {
     switch (env) {
       case AppEnvironment.development:
+        if (remoteHttpClient != null) {
+          return DashboardRepositories(
+            scanner: RemoteScannerRepository(remoteHttpClient),
+            chart: RemoteChartContextRepository(remoteHttpClient),
+            autoWatch: RemoteAutoWatchRepository(remoteHttpClient),
+            telemetry: RemoteSessionTelemetryRepository(remoteHttpClient),
+          );
+        }
         return DashboardRepositories(
           scanner: const FakeScannerRepository(),
           chart: const FakeChartContextRepository(),

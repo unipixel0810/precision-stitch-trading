@@ -1,5 +1,7 @@
 // 진입점: composition root에서 환경별 저장소 → DashboardModule → 화면 주입.
-// staging/production REST: --dart-define=APP_ENV=staging --dart-define=API_BASE_URL=https://...
+// 샘플(가짜) 데이터: 기본 실행 — API_BASE_URL 없음.
+// 실데이터: --dart-define=API_BASE_URL=http://호스트:포트 (APP_ENV=development 여도 원격 저장소 사용)
+// staging/production: --dart-define=APP_ENV=staging --dart-define=API_BASE_URL=https://...
 // 계약: stitch_trader/docs/PHASE4_HTTP_CONTRACT.md
 // 캐시 TTL: --dart-define=CACHE_TTL_HOURS=48
 import 'package:flutter/material.dart';
@@ -34,22 +36,23 @@ Future<void> main() async {
     maxAge: dashboardCacheMaxAgeFromEnvironment(),
   );
 
+  final api = ApiConfig.fromEnvironment();
+
+  /// `API_BASE_URL` 이 있으면 APP_ENV 가 development 여도 원격 번들(실데이터) 사용.
+  /// Parallels Windows 브리지 등: `--dart-define=API_BASE_URL=http://게스트IP:포트`
   DashboardHttpClient? sharedRemote;
   Future<String?> Function()? healthCheck;
-  if (environment != AppEnvironment.development) {
-    final api = ApiConfig.fromEnvironment();
-    if (api.baseUri != null) {
-      final remote = DashboardHttpClient(config: api);
-      sharedRemote = remote;
-      healthCheck = () async {
-        try {
-          await remote.pingHealth();
-          return null;
-        } catch (e) {
-          return e.toString();
-        }
-      };
-    }
+  if (api.baseUri != null) {
+    final remote = DashboardHttpClient(config: api);
+    sharedRemote = remote;
+    healthCheck = () async {
+      try {
+        await remote.pingHealth();
+        return null;
+      } catch (e) {
+        return e.toString();
+      }
+    };
   }
 
   final repos = DashboardRepositoryFactory.create(environment, remoteHttpClient: sharedRemote);
@@ -59,14 +62,27 @@ Future<void> main() async {
     bundleCache: bundleCache,
     checkBackendHealth: healthCheck,
   );
-  runApp(StitchTraderApp(dashboardModule: module, environment: environment));
+  final usesSampleDashboardData = sharedRemote == null;
+  runApp(
+    StitchTraderApp(
+      dashboardModule: module,
+      environment: environment,
+      usesSampleDashboardData: usesSampleDashboardData,
+    ),
+  );
 }
 
 class StitchTraderApp extends StatelessWidget {
-  const StitchTraderApp({super.key, required this.dashboardModule, this.environment = AppEnvironment.development});
+  const StitchTraderApp({
+    super.key,
+    required this.dashboardModule,
+    this.environment = AppEnvironment.development,
+    this.usesSampleDashboardData = true,
+  });
 
   final DashboardModule dashboardModule;
   final AppEnvironment environment;
+  final bool usesSampleDashboardData;
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +106,11 @@ class StitchTraderApp extends StatelessWidget {
         textTheme: display,
         iconTheme: const IconThemeData(color: StitchColors.onSurfaceVariant),
       ),
-      home: PrecisionDashboardPage(module: dashboardModule, environment: environment),
+      home: PrecisionDashboardPage(
+        module: dashboardModule,
+        environment: environment,
+        usesSampleDashboardData: usesSampleDashboardData,
+      ),
     );
   }
 }

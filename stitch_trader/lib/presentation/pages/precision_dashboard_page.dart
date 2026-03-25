@@ -12,10 +12,18 @@ import '../theme/stitch_colors.dart';
 import 'analytics_performance_tab.dart';
 
 class PrecisionDashboardPage extends StatefulWidget {
-  const PrecisionDashboardPage({super.key, required this.module, this.environment = AppEnvironment.development});
+  const PrecisionDashboardPage({
+    super.key,
+    required this.module,
+    this.environment = AppEnvironment.development,
+    this.usesSampleDashboardData = true,
+  });
 
   final DashboardModule module;
   final AppEnvironment environment;
+
+  /// 가짜 저장소(Fake*)로만 번들을 채울 때 true. `API_BASE_URL` 지정 시 false.
+  final bool usesSampleDashboardData;
 
   @override
   State<PrecisionDashboardPage> createState() => _PrecisionDashboardPageState();
@@ -297,6 +305,8 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverToBoxAdapter(child: _topNav()),
+                if (widget.usesSampleDashboardData)
+                  SliverToBoxAdapter(child: _sampleDataModeBanner()),
                 if (_mainNavIndex == 0 && _bundle!.servedFromCache)
                   SliverToBoxAdapter(child: _offlineSnapshotBanner()),
                 if (_mainNavIndex == 0)
@@ -354,6 +364,39 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
           ),
           if (_mainNavIndex == 0) _LatencyToast(telemetry: _bundle!.telemetry),
         ],
+      ),
+    );
+  }
+
+  Widget _sampleDataModeBanner() {
+    return Material(
+      color: StitchColors.tertiaryContainer.fade(0.12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: StitchColors.tertiaryContainer.fade(0.4))),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.layers_outlined, size: 20, color: StitchColors.tertiaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '샘플·예시 데이터 모드 — 시세·스캐너·주문이 가짜 저장소입니다. '
+                '실사용에 가깝게 보려면 백엔드에 `--dart-define=API_BASE_URL=...` 를 붙여 실행하세요. '
+                '(계약: docs/PHASE4_HTTP_CONTRACT.md)',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  height: 1.35,
+                  color: StitchColors.onSurface,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

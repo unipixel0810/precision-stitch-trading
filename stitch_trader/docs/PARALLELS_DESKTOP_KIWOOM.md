@@ -18,7 +18,11 @@ Flutter(UI)와 Windows(주문)는 **직접 프로세스 호출이 불가**하므
 1. Windows VM에서 **아주 얇은 HTTP 서버**(FastAPI/Flask 등) 실행.
 2. 엔드포인트 예: `POST /v1/order`, `GET /v1/price?code=005930` — 내부에서 PyQt 키움 `dynamicCall(SendOrder…)` 호출.
 3. Parallels **공유 네트워크**에서 호스트 맥 → 게스트 Windows IP로 요청 (또는 포트 포워딩).
-4. macOS에서 돌리는 Flutter는 `API_BASE_URL=http://<게스트_IP>:포트` 처럼 **원격만** 쓰면 됨 (지금 `PHASE4_HTTP_CONTRACT.md` 방향과 동일).
+4. macOS에서 돌리는 Flutter는 `API_BASE_URL=http://<게스트_IP>:포트` 처럼 **원격만** 쓰면 됨 (`APP_ENV` 를 꼭 staging으로 바꿀 필요 없음 — **development + API_BASE_URL** 만으로도 원격 번들 사용).
+
+```bash
+flutter run -d chrome --dart-define=API_BASE_URL=http://10.211.55.3:8787
+```
 
 **주의:** API 서버에 인증·방화벽을 반드시 걸 것. 개발 중에만 VM 내부 `localhost`로 제한하는 것도 가능.
 
