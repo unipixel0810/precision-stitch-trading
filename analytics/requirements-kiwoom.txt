@@ -1,0 +1,3 @@
+# Windows + 키움 OpenAPI+ (PyQt5 QAx) 샘플 전용
+# pip install -r requirements-kiwoom.txt
+PyQt5>=5.15
