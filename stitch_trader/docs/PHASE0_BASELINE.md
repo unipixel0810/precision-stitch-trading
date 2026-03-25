@@ -73,4 +73,4 @@ P0에서는 **파일 이동 없음**. 위 표만 계약으로 삼는다.
 
 - [x] `lib/domain`, `application`, `infrastructure`, `presentation` 폴더 및 README 존재
 - [x] 본 문서와 `rule.md` Phase 0 정렬
-- [ ] Phase 1: 엔티티·Port·디자인 감사표 작성
+- [x] Phase 1: 엔티티·Port·디자인 감사표·확장 슬롯 (`docs/PHASE1_*.md`, `lib/domain/`)

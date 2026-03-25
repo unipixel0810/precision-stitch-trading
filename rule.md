@@ -124,6 +124,8 @@ lib/
 
 ### Phase 1 — Domain + 디자인 감사
 
+**산출물 위치:** `stitch_trader/lib/domain/`, `stitch_trader/docs/PHASE1_DESIGN_AUDIT.md`, `stitch_trader/docs/PHASE1_EXPANSION_SLOTS.md`
+
 | 순서 | 구분 | 태스크 |
 |------|------|--------|
 | 1 | 설계 | 엔티티·값 객체·리포지토리 Port 초안(스캐너 항목, 시세 스냅, 감시 라인, 0624 설정 등). |
