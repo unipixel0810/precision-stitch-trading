@@ -152,6 +152,30 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
 
   String _pctUi(double p) => '${p >= 0 ? '+' : ''}${p.toStringAsFixed(1)}%';
 
+  /// 실제 매매는 키움 OpenAPI+(Windows)·백엔드·Python 엔진 연동 후에만 가능합니다.
+  static const String _stubTradingExplain =
+      '현재 빌드는 UI·샘플 데이터입니다. 주문/체결은 미연동 상태입니다. '
+      '실거래는 Windows VPS의 키움 API + analytics/stitch_server_engine.py 등을 연결해야 합니다.';
+
+  void _showStubActionNotice(String headline) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 7),
+        backgroundColor: StitchColors.surfaceContainerHigh,
+        content: Text(
+          '$headline\n\n$_stubTradingExplain',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            height: 1.35,
+            color: StitchColors.onSurface,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _scannerCardFromHit(ScannerHit hit) {
     return _scannerCard(
       badge: hit.badgeLabel,
@@ -162,6 +186,9 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
       chipRows: hit.chips.map((c) => _ChipData(c.label, _mapChipTone(c.tone))).toList(),
       thumb: hit.thumbnailUri,
       viLeftRail: hit.viHighlighted,
+      onTap: () => _showStubActionNotice(
+        '「${hit.instrument.displayName}」종목 카드 — 차트 심볼·실시간 호가 전환은 아직 없습니다.',
+      ),
     );
   }
 
@@ -500,7 +527,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                 elevation: 0,
               ),
-              onPressed: () {},
+              onPressed: () => _showStubActionNotice('LIVE TRADING'),
               child: Text(
                 'LIVE TRADING',
                 style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2),
@@ -508,7 +535,8 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
             ),
             const SizedBox(width: 12),
             IconButton(
-              onPressed: () {},
+              tooltip: '설정',
+              onPressed: () => _showStubActionNotice('설정 — 화면 미구현'),
               icon: Icon(Icons.settings_outlined, color: StitchColors.onSurfaceVariant),
             ),
                         ],
@@ -591,7 +619,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: () => _showStubActionNotice('신규 스캐너 추가'),
                 icon: Icon(Icons.add_circle_outline, size: 18, color: StitchColors.primaryContainer),
                 label: Text(
                   '신규 스캐너 추가',
@@ -626,13 +654,14 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
     required List<_ChipData> chipRows,
     required String thumb,
     bool viLeftRail = false,
+    required VoidCallback onTap,
   }) {
     final cyanEdge = StitchColors.primaryContainer.fade(0.3);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         borderRadius: BorderRadius.circular(4),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(4),
@@ -1477,7 +1506,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () {},
+                      onTap: () => _showStubActionNotice('오토봇 실행 — 키움 SendOrder·감시주문 미연동'),
                       borderRadius: BorderRadius.circular(4),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 16),
