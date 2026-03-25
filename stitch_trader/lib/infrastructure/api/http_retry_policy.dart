@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
 import 'api_exceptions.dart';
 
 /// GET/PUT 공통 재시도(일시적 네트워크·5xx).
+/// [SocketException] 은 웹에서 `dart:io` 미지원이라 제외 — VM에서는 [ClientException]으로 대부분 감싸짐.
 final class HttpRetryPolicy {
   const HttpRetryPolicy({
     this.maxAttempts = 3,
@@ -18,7 +18,6 @@ final class HttpRetryPolicy {
 
   static bool _retriable(Object error) {
     if (error is TimeoutException) return true;
-    if (error is SocketException) return true;
     if (error is http.ClientException) return true;
     if (error is HttpResponseException) return error.isTransient;
     return false;

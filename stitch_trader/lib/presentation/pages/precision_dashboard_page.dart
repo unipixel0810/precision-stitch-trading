@@ -270,18 +270,36 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                 if (_bundle!.servedFromCache) SliverToBoxAdapter(child: _offlineSnapshotBanner()),
                 SliverFillRemaining(
                   hasScrollBody: true,
-                  child: Stack(
-                    children: [
-                      Positioned.fill(child: CustomPaint(painter: _GridDotsPainter())),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                  child: LayoutBuilder(
+                    builder: (context, c) {
+                      final vw = c.maxWidth.isFinite ? c.maxWidth : _dashboardMinContentWidth;
+                      final contentW = vw < _dashboardMinContentWidth ? _dashboardMinContentWidth : vw;
+                      return Stack(
+                        fit: StackFit.expand,
                         children: [
-                          SizedBox(width: _sideWidth, child: _scannerPanel()),
-                          Expanded(child: _chartPanel()),
-                          SizedBox(width: _sideWidth, child: _controllerPanel()),
+                          Positioned.fill(child: CustomPaint(painter: _GridDotsPainter())),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              primary: false,
+                              child: SizedBox(
+                                width: contentW,
+                                height: c.maxHeight,
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    SizedBox(width: _sideWidth, child: _scannerPanel()),
+                                    Expanded(child: _chartPanel()),
+                                    SizedBox(width: _sideWidth, child: _controllerPanel()),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
               ],
@@ -322,17 +340,37 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
     );
   }
 
+  /// 좁은 뷰포트(웹 창 축소 등)에서 가로 오버플로 방지.
+  static const double _topNavMinContentWidth = 1080;
+
+  /// 좌·우 패널 [_sideWidth] + 차트 최소 가독 폭.
+  static const double _dashboardMinContentWidth = _sideWidth + 440 + _sideWidth;
+
   Widget _topNav() {
     return Material(
       color: StitchColors.surface,
-      child: Container(
-        height: 64,
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: StitchColors.primaryContainer.fade(0.2))),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Row(
-          children: [
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final vw = constraints.maxWidth.isFinite ? constraints.maxWidth : _topNavMinContentWidth;
+          final contentW = vw < _topNavMinContentWidth ? _topNavMinContentWidth : vw;
+          return SizedBox(
+            height: 64,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: StitchColors.primaryContainer.fade(0.2))),
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  primary: false,
+                  child: SizedBox(
+                    width: contentW,
+                    height: 64,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
             Text(
               'AutoTrader',
               style: GoogleFonts.manrope(
@@ -453,8 +491,15 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
               onPressed: () {},
               icon: Icon(Icons.settings_outlined, color: StitchColors.onSurfaceVariant),
             ),
-          ],
-        ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1139,33 +1184,38 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
         color: StitchColors.surfaceContainerLowest,
         border: Border(top: BorderSide(color: StitchColors.primaryContainer.fade(0.1))),
       ),
-      child: Row(
-        children: [
-          ohlcKV('O', _formatKrw(o.openKrw)),
-          const SizedBox(width: 16),
-          ohlcKV('H', _formatKrw(o.highKrw)),
-          const SizedBox(width: 16),
-          ohlcKV('L', _formatKrw(o.lowKrw)),
-          const SizedBox(width: 16),
-          ohlcKV('C', _formatKrw(o.closeKrw)),
-          const SizedBox(width: 24),
-          Container(width: 1, height: 12, color: StitchColors.outlineVariant.fade(0.3)),
-          const SizedBox(width: 16),
-          ohlcKV('Vol', o.volumeDescription, highlight: StitchColors.primaryContainer),
-          const SizedBox(width: 16),
-          Text.rich(
-            TextSpan(
-              style: GoogleFonts.inter(fontSize: 10, color: StitchColors.onSurfaceVariant),
-              children: [
-                TextSpan(text: '틱 스냅: ', style: TextStyle(letterSpacing: 0.5)),
-                TextSpan(
-                  text: '${_formatKrw(o.tickSizeKrw)} KRW',
-                  style: TextStyle(color: StitchColors.onSurface, fontWeight: FontWeight.w700),
-                ),
-              ],
+      alignment: Alignment.centerLeft,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ohlcKV('O', _formatKrw(o.openKrw)),
+            const SizedBox(width: 16),
+            ohlcKV('H', _formatKrw(o.highKrw)),
+            const SizedBox(width: 16),
+            ohlcKV('L', _formatKrw(o.lowKrw)),
+            const SizedBox(width: 16),
+            ohlcKV('C', _formatKrw(o.closeKrw)),
+            const SizedBox(width: 24),
+            Container(width: 1, height: 12, color: StitchColors.outlineVariant.fade(0.3)),
+            const SizedBox(width: 16),
+            ohlcKV('Vol', o.volumeDescription, highlight: StitchColors.primaryContainer),
+            const SizedBox(width: 16),
+            Text.rich(
+              TextSpan(
+                style: GoogleFonts.inter(fontSize: 10, color: StitchColors.onSurfaceVariant),
+                children: [
+                  TextSpan(text: '틱 스냅: ', style: TextStyle(letterSpacing: 0.5)),
+                  TextSpan(
+                    text: '${_formatKrw(o.tickSizeKrw)} KRW',
+                    style: TextStyle(color: StitchColors.onSurface, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1643,57 +1693,64 @@ class _LatencyToast extends StatelessWidget {
       bottom: 24,
       child: IgnorePointer(
         child: Center(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                decoration: BoxDecoration(
-                  color: StitchColors.surfaceContainerHigh.fade(0.9),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: StitchColors.primaryContainer.fade(0.3)),
-                  boxShadow: [BoxShadow(color: Colors.black.fade(0.5), blurRadius: 24)],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.settings_input_antenna_outlined, size: 18, color: StitchColors.primaryContainer),
-                    const SizedBox(width: 12),
-                    Text(
-                      '지연시간: ${telemetry.roundTripLatencyMs}ms',
-                      style: GoogleFonts.manrope(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: StitchColors.onSurface,
-                        letterSpacing: -0.2,
-                      ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width - 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: StitchColors.surfaceContainerHigh.fade(0.9),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: StitchColors.primaryContainer.fade(0.3)),
+                    boxShadow: [BoxShadow(color: Colors.black.fade(0.5), blurRadius: 24)],
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.settings_input_antenna_outlined, size: 18, color: StitchColors.primaryContainer),
+                        const SizedBox(width: 12),
+                        Text(
+                          '지연시간: ${telemetry.roundTripLatencyMs}ms',
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: StitchColors.onSurface,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(width: 1, height: 12, color: StitchColors.outlineVariant.fade(0.3)),
+                        const SizedBox(width: 12),
+                        Text(
+                          'API: ${telemetry.apiLabel}',
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: StitchColors.onSurface,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(width: 1, height: 12, color: StitchColors.outlineVariant.fade(0.3)),
+                        const SizedBox(width: 12),
+                        Text(
+                          telemetry.tickSnapApplied ? '틱 단위 스냅 적용' : '틱 스냅 미적용',
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: StitchColors.primaryContainer,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Container(width: 1, height: 12, color: StitchColors.outlineVariant.fade(0.3)),
-                    const SizedBox(width: 12),
-                    Text(
-                      'API: ${telemetry.apiLabel}',
-                      style: GoogleFonts.manrope(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: StitchColors.onSurface,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(width: 1, height: 12, color: StitchColors.outlineVariant.fade(0.3)),
-                    const SizedBox(width: 12),
-                    Text(
-                      telemetry.tickSnapApplied ? '틱 단위 스냅 적용' : '틱 스냅 미적용',
-                      style: GoogleFonts.manrope(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: StitchColors.primaryContainer,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
