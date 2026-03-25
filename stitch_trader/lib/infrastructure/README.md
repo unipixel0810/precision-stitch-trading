@@ -6,4 +6,5 @@
 - DTO·직렬화는 가능하면 이 레이어(또는 하위 `api/`·`database/`)에 둡니다.
 
 - **Phase 4:** `api/` HTTP 클라이언트·매퍼, `remote/` REST 구현 — 계약은 `docs/PHASE4_HTTP_CONTRACT.md`.
+- **Persistence:** `persistence/` — 예: `SharedPreferences` 기반 대시보드 번들 캐시.
 - Phase 3까지는 `fake/` 로 UI 검증 가능.

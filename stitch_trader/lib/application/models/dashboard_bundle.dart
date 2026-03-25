@@ -11,6 +11,7 @@ final class DashboardBundle {
     required this.riskSettings,
     required this.telemetry,
     required this.chartBackgroundUri,
+    this.servedFromCache = false,
   });
 
   final List<ScannerHit> scannerHits;
@@ -21,4 +22,20 @@ final class DashboardBundle {
   final RiskSettings riskSettings;
   final SessionTelemetry telemetry;
   final String chartBackgroundUri;
+  /// 로컬에 저장된 마지막 스냅샷으로만 화면을 채웠을 때 true.
+  final bool servedFromCache;
+
+  DashboardBundle copyWith({bool? servedFromCache}) {
+    return DashboardBundle(
+      scannerHits: scannerHits,
+      selectedSymbol: selectedSymbol,
+      ohlc: ohlc,
+      priceLines: priceLines,
+      autoWatch: autoWatch,
+      riskSettings: riskSettings,
+      telemetry: telemetry,
+      chartBackgroundUri: chartBackgroundUri,
+      servedFromCache: servedFromCache ?? this.servedFromCache,
+    );
+  }
 }

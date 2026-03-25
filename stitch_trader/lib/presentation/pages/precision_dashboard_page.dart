@@ -42,6 +42,25 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
     _load();
   }
 
+  Future<void> _runHealthCheck() async {
+    final fn = widget.module.checkBackendHealth;
+    if (fn == null) return;
+    final msg = await fn();
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(msg == null ? '연결 정상' : '연결 실패'),
+        content: SingleChildScrollView(
+          child: SelectableText(msg ?? 'GET /v1/health 응답 OK'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('닫기')),
+        ],
+      ),
+    );
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -206,6 +225,13 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                     onPressed: _load,
                     child: const Text('다시 시도'),
                   ),
+                  if (widget.module.checkBackendHealth != null) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: _runHealthCheck,
+                      child: const Text('연결 진단 (/v1/health)'),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -226,6 +252,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
           Column(
             children: [
               _topNav(),
+              if (_bundle!.servedFromCache) _offlineSnapshotBanner(),
               Expanded(
                 child: Stack(
                   children: [
@@ -245,6 +272,35 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
           ),
           _LatencyToast(telemetry: _bundle!.telemetry),
         ],
+      ),
+    );
+  }
+
+  Widget _offlineSnapshotBanner() {
+    return Material(
+      color: StitchColors.tertiaryContainer.fade(0.12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: StitchColors.tertiaryContainer.fade(0.35))),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.wifi_off_outlined, size: 20, color: StitchColors.tertiaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '오프라인 · 마지막으로 저장된 스냅샷입니다. 네트워크가 복구되면 새로고침하세요.',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: StitchColors.onSurface,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

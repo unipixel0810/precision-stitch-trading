@@ -16,6 +16,18 @@
   - 재시도 대상: `TimeoutException`, `SocketException`, `ClientException`, HTTP **408 / 429 / 5xx**.
   - **4xx**(위에 해당하지 않는 경우)는 재시도하지 않는다.
   - backoff: 250ms 시작 지수 증가(×2).
+- **오프라인 캐시:** 마지막으로 **성공한** 번들을 `shared_preferences`에 JSON 저장한다. 이후 전체 로드가 실패하면 캐시를 읽어 화면에 표시(`servedFromCache`)하고 상단에 오프라인 배너를 띄운다.
+- **연결 진단:** 앱 구성이 허용하면 오류 화면에서 `GET /v1/health` 를 호출해 결과를 대화상자로 보여 준다.
+
+### `GET /v1/health`
+
+`2xx` + JSON 본문(빈 객체도 가능). 예:
+
+```json
+{ "status": "ok" }
+```
+
+본문 형식은 자유. 클라이언트는 상태 코드만으로 성공을 판단한다.
 
 ## 엔드포인트
 
@@ -126,4 +138,5 @@
 - 재시도: `lib/infrastructure/api/http_retry_policy.dart`
 - 매핑: `lib/infrastructure/api/dashboard_json_mapper.dart`
 - 예외: `lib/infrastructure/api/api_exceptions.dart`
-- 번들 조립: `lib/application/use_cases/load_dashboard_bundle.dart` (병렬 `Future.wait`)
+- 번들 조립: `lib/application/use_cases/load_dashboard_bundle.dart` (병렬 `Future.wait`, 캐시 폴백).
+- 캐시: `lib/infrastructure/persistence/shared_preferences_dashboard_bundle_cache.dart`, 코덱 `lib/application/dashboard_bundle_codec.dart`.

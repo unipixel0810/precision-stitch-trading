@@ -13,7 +13,10 @@ import 'app_environment.dart';
 import 'dashboard_repositories.dart';
 
 abstract final class DashboardRepositoryFactory {
-  static DashboardRepositories create(AppEnvironment env) {
+  static DashboardRepositories create(
+    AppEnvironment env, {
+    DashboardHttpClient? remoteHttpClient,
+  }) {
     switch (env) {
       case AppEnvironment.development:
         return DashboardRepositories(
@@ -24,13 +27,12 @@ abstract final class DashboardRepositoryFactory {
         );
       case AppEnvironment.staging:
       case AppEnvironment.production:
-        final api = ApiConfig.fromEnvironment();
-        final httpClient = DashboardHttpClient(config: api);
+        final client = remoteHttpClient ?? DashboardHttpClient(config: ApiConfig.fromEnvironment());
         return DashboardRepositories(
-          scanner: RemoteScannerRepository(httpClient),
-          chart: RemoteChartContextRepository(httpClient),
-          autoWatch: RemoteAutoWatchRepository(httpClient),
-          telemetry: RemoteSessionTelemetryRepository(httpClient),
+          scanner: RemoteScannerRepository(client),
+          chart: RemoteChartContextRepository(client),
+          autoWatch: RemoteAutoWatchRepository(client),
+          telemetry: RemoteSessionTelemetryRepository(client),
         );
     }
   }

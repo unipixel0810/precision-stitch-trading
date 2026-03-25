@@ -1,6 +1,7 @@
 import 'package:stitch_trader/domain/dashboard_contracts.dart';
 
 import '../models/dashboard_bundle.dart';
+import '../ports/dashboard_bundle_cache_port.dart';
 
 final class LoadDashboardBundle {
   LoadDashboardBundle({
@@ -9,19 +10,36 @@ final class LoadDashboardBundle {
     required AutoWatchRepository autoWatchRepository,
     required SessionTelemetryRepository telemetryRepository,
     required SymbolCode defaultSymbol,
+    DashboardBundleCachePort? bundleCache,
   })  : _scanner = scannerRepository,
         _chart = chartRepository,
         _auto = autoWatchRepository,
         _telemetry = telemetryRepository,
-        _symbol = defaultSymbol;
+        _symbol = defaultSymbol,
+        _cache = bundleCache;
 
   final ScannerRepository _scanner;
   final ChartContextRepository _chart;
   final AutoWatchRepository _auto;
   final SessionTelemetryRepository _telemetry;
   final SymbolCode _symbol;
+  final DashboardBundleCachePort? _cache;
 
   Future<DashboardBundle> call() async {
+    try {
+      final bundle = await _fetchFresh();
+      await _cache?.write(bundle);
+      return bundle;
+    } catch (_) {
+      final stale = await _cache?.read();
+      if (stale != null) {
+        return stale;
+      }
+      rethrow;
+    }
+  }
+
+  Future<DashboardBundle> _fetchFresh() async {
     final results = await Future.wait<Object?>(<Future<Object?>>[
       _scanner.listHits(),
       _chart.getOhlc(_symbol),

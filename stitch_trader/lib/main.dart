@@ -3,10 +3,14 @@
 // 계약: stitch_trader/docs/PHASE4_HTTP_CONTRACT.md
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stitch_trader/app/app_environment.dart';
 import 'package:stitch_trader/app/dashboard_module.dart';
 import 'package:stitch_trader/app/dashboard_repository_factory.dart';
 import 'package:stitch_trader/domain/dashboard_contracts.dart';
+import 'package:stitch_trader/infrastructure/api/api_config.dart';
+import 'package:stitch_trader/infrastructure/api/dashboard_http_client.dart';
+import 'package:stitch_trader/infrastructure/persistence/shared_preferences_dashboard_bundle_cache.dart';
 import 'package:stitch_trader/presentation/pages/precision_dashboard_page.dart';
 import 'package:stitch_trader/presentation/theme/stitch_colors.dart';
 
@@ -19,13 +23,36 @@ AppEnvironment _appEnvironmentFromDefine() {
   };
 }
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final environment = _appEnvironmentFromDefine();
-  final repos = DashboardRepositoryFactory.create(environment);
+  final prefs = await SharedPreferences.getInstance();
+  final bundleCache = SharedPreferencesDashboardBundleCache(prefs);
+
+  DashboardHttpClient? sharedRemote;
+  Future<String?> Function()? healthCheck;
+  if (environment != AppEnvironment.development) {
+    final api = ApiConfig.fromEnvironment();
+    if (api.baseUri != null) {
+      final remote = DashboardHttpClient(config: api);
+      sharedRemote = remote;
+      healthCheck = () async {
+        try {
+          await remote.pingHealth();
+          return null;
+        } catch (e) {
+          return e.toString();
+        }
+      };
+    }
+  }
+
+  final repos = DashboardRepositoryFactory.create(environment, remoteHttpClient: sharedRemote);
   final module = DashboardModule.fromRepositories(
     repos,
     defaultSymbol: SymbolCode('005380'),
+    bundleCache: bundleCache,
+    checkBackendHealth: healthCheck,
   );
   runApp(StitchTraderApp(dashboardModule: module, environment: environment));
 }

@@ -46,6 +46,11 @@ final class DashboardHttpClient {
         }
       });
 
+  /// 스테이징/프로덕션 연결 진단용. `docs/PHASE4_HTTP_CONTRACT.md` — `GET /v1/health`.
+  Future<void> pingHealth() async {
+    await getJson('/v1/health');
+  }
+
   Future<void> putJson(String absolutePath, Map<String, Object?> body) => _retry.run(() async {
         final uri = _config.buildUri(absolutePath);
         final headers = {..._headers, 'Content-Type': 'application/json; charset=utf-8'};
