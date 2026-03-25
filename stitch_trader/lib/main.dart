@@ -1,6 +1,7 @@
 // 진입점: composition root에서 환경별 저장소 → DashboardModule → 화면 주입.
 // staging/production REST: --dart-define=APP_ENV=staging --dart-define=API_BASE_URL=https://...
 // 계약: stitch_trader/docs/PHASE4_HTTP_CONTRACT.md
+// 캐시 TTL: --dart-define=CACHE_TTL_HOURS=48
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +11,7 @@ import 'package:stitch_trader/app/dashboard_repository_factory.dart';
 import 'package:stitch_trader/domain/dashboard_contracts.dart';
 import 'package:stitch_trader/infrastructure/api/api_config.dart';
 import 'package:stitch_trader/infrastructure/api/dashboard_http_client.dart';
+import 'package:stitch_trader/infrastructure/persistence/dashboard_cache_ttl.dart';
 import 'package:stitch_trader/infrastructure/persistence/shared_preferences_dashboard_bundle_cache.dart';
 import 'package:stitch_trader/presentation/pages/precision_dashboard_page.dart';
 import 'package:stitch_trader/presentation/theme/stitch_colors.dart';
@@ -27,7 +29,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final environment = _appEnvironmentFromDefine();
   final prefs = await SharedPreferences.getInstance();
-  final bundleCache = SharedPreferencesDashboardBundleCache(prefs);
+  final bundleCache = SharedPreferencesDashboardBundleCache(
+    prefs,
+    maxAge: dashboardCacheMaxAgeFromEnvironment(),
+  );
 
   DashboardHttpClient? sharedRemote;
   Future<String?> Function()? healthCheck;

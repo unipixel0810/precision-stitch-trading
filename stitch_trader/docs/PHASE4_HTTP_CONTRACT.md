@@ -16,7 +16,9 @@
   - 재시도 대상: `TimeoutException`, `SocketException`, `ClientException`, HTTP **408 / 429 / 5xx**.
   - **4xx**(위에 해당하지 않는 경우)는 재시도하지 않는다.
   - backoff: 250ms 시작 지수 증가(×2).
-- **오프라인 캐시:** 마지막으로 **성공한** 번들을 `shared_preferences`에 JSON 저장한다. 이후 전체 로드가 실패하면 캐시를 읽어 화면에 표시(`servedFromCache`)하고 상단에 오프라인 배너를 띄운다.
+- **오프라인 캐시:** 마지막으로 **성공한** 번들을 `shared_preferences`에 JSON 저장한다. 페이로드에 `cachedAtEpochMs`(저장 시각)와 스키마 `_v`(현재 `1`)를 둔다. **`_v`가 맞지 않으면** 파싱 단계에서 예외가 나며 캐시 엔트리는 삭제된다 — 필드 변경 시 `dashboard_bundle_codec`에서 **`_fromMapV2` 등 마이그레이션 분기**를 추가한다.
+- **캐시 TTL:** `--dart-define=CACHE_TTL_HOURS=24`(기본 24, 범위 1~168). 기간이 지난 캐시는 **폴백에 사용하지 않고** 키를 제거한다. 타임스탬프 없는 레거시 캐시도 제거된다.
+- **새로고침:** 대시보드 본문은 **아래로 당기기(RefreshIndicator)** 로 무음 새로고침(전체 화면 로더 없음). 상단 바에 **새로고침 아이콘**도 동일 동작.
 - **연결 진단:** 앱 구성이 허용하면 오류 화면에서 `GET /v1/health` 를 호출해 결과를 대화상자로 보여 준다.
 
 ### `GET /v1/health`

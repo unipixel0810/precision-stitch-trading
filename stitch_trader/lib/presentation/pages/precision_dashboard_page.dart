@@ -25,6 +25,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
 
   DashboardBundle? _bundle;
   bool _loading = true;
+  bool _refreshBusy = false;
   Object? _loadError;
 
   double _tpPercent = 3.5;
@@ -61,17 +62,25 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
     );
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _loadError = null;
-    });
+  Future<void> _load({bool showFullScreenLoader = true}) async {
+    final needsFullScreen = showFullScreenLoader || _bundle == null;
+    if (!needsFullScreen && _refreshBusy) return;
+    if (!needsFullScreen) {
+      _refreshBusy = true;
+      if (mounted) setState(() => _loadError = null);
+    } else {
+      setState(() {
+        _loading = true;
+        _loadError = null;
+      });
+    }
     try {
       final b = await widget.module.loadDashboard.call();
       if (!mounted) return;
       setState(() {
         _bundle = b;
         _loading = false;
+        _refreshBusy = false;
         _loadError = null;
         _tpPercent = b.riskSettings.takeProfitPercent;
         _slPercent = b.riskSettings.stopLossPercentMagnitude;
@@ -82,6 +91,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
       if (!mounted) return;
       setState(() {
         _loading = false;
+        _refreshBusy = false;
         if (_bundle == null) {
           _loadError = e;
         }
@@ -111,7 +121,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
   Future<void> _persistRisk() async {
     try {
       await widget.module.updateRiskSettings.call(_riskFromForm());
-      await _load();
+      await _load(showFullScreenLoader: false);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -249,26 +259,33 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
       body: Stack(
         clipBehavior: Clip.none,
         children: [
-          Column(
-            children: [
-              _topNav(),
-              if (_bundle!.servedFromCache) _offlineSnapshotBanner(),
-              Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(child: CustomPaint(painter: _GridDotsPainter())),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(width: _sideWidth, child: _scannerPanel()),
-                        Expanded(child: _chartPanel()),
-                        SizedBox(width: _sideWidth, child: _controllerPanel()),
-                      ],
-                    ),
-                  ],
+          RefreshIndicator(
+            color: StitchColors.primaryContainer,
+            edgeOffset: 64,
+            onRefresh: () => _load(showFullScreenLoader: false),
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(child: _topNav()),
+                if (_bundle!.servedFromCache) SliverToBoxAdapter(child: _offlineSnapshotBanner()),
+                SliverFillRemaining(
+                  hasScrollBody: true,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: CustomPaint(painter: _GridDotsPainter())),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(width: _sideWidth, child: _scannerPanel()),
+                          Expanded(child: _chartPanel()),
+                          SizedBox(width: _sideWidth, child: _controllerPanel()),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           _LatencyToast(telemetry: _bundle!.telemetry),
         ],
@@ -291,7 +308,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                '오프라인 · 마지막으로 저장된 스냅샷입니다. 네트워크가 복구되면 새로고침하세요.',
+                '오프라인 · 마지막으로 저장된 스냅샷입니다. 상단 새로고침 또는 화면을 아래로 당겨 다시 시도하세요.',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -403,7 +420,20 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                 ],
               ),
             ),
-            const SizedBox(width: 24),
+            const SizedBox(width: 12),
+            IconButton(
+              tooltip: '새로고침',
+              onPressed: (_loading || _refreshBusy)
+                  ? null
+                  : () => _load(showFullScreenLoader: false),
+              icon: Icon(
+                Icons.refresh,
+                color: (_loading || _refreshBusy)
+                    ? StitchColors.onSurfaceVariant.fade(0.4)
+                    : StitchColors.primaryContainer,
+              ),
+            ),
+            const SizedBox(width: 12),
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: StitchColors.primaryContainer,

@@ -49,6 +49,17 @@ DashboardBundle _sample() {
 }
 
 void main() {
+  test('encodeForPersist includes timestamp; decodePersisted strips it', () {
+    final a = _sample();
+    final raw = DashboardBundleCodec.encodeForPersist(a);
+    final (b, at) = DashboardBundleCodec.decodePersisted(raw, servedFromCache: true);
+    expect(at, isNotNull);
+    expect(at!, greaterThan(0));
+    expect(b.selectedSymbol.value, '005380');
+    final decoded = DashboardBundleCodec.decode(raw, servedFromCache: true);
+    expect(decoded.selectedSymbol.value, '005380');
+  });
+
   test('codec roundtrip and servedFromCache flag', () {
     final a = _sample();
     final raw = DashboardBundleCodec.encode(a);

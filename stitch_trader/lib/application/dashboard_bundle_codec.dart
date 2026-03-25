@@ -9,12 +9,36 @@ abstract final class DashboardBundleCodec {
 
   static String encode(DashboardBundle b) => jsonEncode(toMap(b));
 
+  /// 디스크/Preferences 저장용 — 저장 시각 포함.
+  static String encodeForPersist(DashboardBundle b) {
+    final m = Map<String, dynamic>.from(toMap(b));
+    m['cachedAtEpochMs'] = DateTime.now().millisecondsSinceEpoch;
+    return jsonEncode(m);
+  }
+
+  /// 테스트·마이그레이션용 디코드. `cachedAtEpochMs` 가 있으면 제거 후 파싱.
   static DashboardBundle decode(String raw, {required bool servedFromCache}) {
-    final m = jsonDecode(raw);
-    if (m is! Map<String, dynamic>) {
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) {
       throw FormatException('bundle cache: root must be object');
     }
+    final m = Map<String, dynamic>.from(decoded)..remove('cachedAtEpochMs');
     return fromMap(m, servedFromCache: servedFromCache);
+  }
+
+  /// TTL 판단용 — `(번들, 저장 시각 ms)`. 타임스탬프 없으면(레거시) `null`.
+  static (DashboardBundle bundle, int? cachedAtMs) decodePersisted(
+    String raw, {
+    required bool servedFromCache,
+  }) {
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) {
+      throw FormatException('bundle cache: root must be object');
+    }
+    final m = Map<String, dynamic>.from(decoded);
+    final at = (m['cachedAtEpochMs'] as num?)?.toInt();
+    m.remove('cachedAtEpochMs');
+    return (fromMap(m, servedFromCache: servedFromCache), at);
   }
 
   static Map<String, Object?> toMap(DashboardBundle b) => {
@@ -32,9 +56,17 @@ abstract final class DashboardBundleCodec {
 
   static DashboardBundle fromMap(Map<String, dynamic> m, {required bool servedFromCache}) {
     final ver = m['_v'];
-    if (ver is! int || ver != _v) {
-      throw FormatException('bundle cache: unsupported _v $ver');
+    if (ver is! int) {
+      throw FormatException('bundle cache: _v must be int');
     }
+    return switch (ver) {
+      1 => _fromMapV1(m, servedFromCache: servedFromCache),
+      _ => throw FormatException('bundle cache: unsupported _v $ver (마이그레이션: dashboard_bundle_codec)'),
+    };
+  }
+
+  /// 스키마 v1. 향후 v2 추가 시 [ver] 분기에서 `_fromMapV2` 호출.
+  static DashboardBundle _fromMapV1(Map<String, dynamic> m, {required bool servedFromCache}) {
     final sym = SymbolCode(m['selectedSymbol'] as String);
     final hitsRaw = m['scannerHits'] as List<dynamic>?;
     final linesRaw = m['priceLines'] as List<dynamic>?;

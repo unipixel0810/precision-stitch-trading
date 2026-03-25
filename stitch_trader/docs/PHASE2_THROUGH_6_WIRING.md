@@ -18,7 +18,7 @@
 
 - `lib/infrastructure/api/*` — `ApiConfig`(`API_BASE_URL`, `API_KEY`), `DashboardHttpClient` + `HttpRetryPolicy`, JSON 매퍼·예외.
 - `lib/infrastructure/remote/*` — 위 클라이언트로 REST 호출. 계약: `docs/PHASE4_HTTP_CONTRACT.md`.
-- `lib/infrastructure/persistence/*` — 마지막 성공 번들 로컬 캐시(`shared_preferences`).
+- `lib/infrastructure/persistence/*` — 마지막 성공 번들 로컬 캐시(`shared_preferences`, TTL·`dashboard_cache_ttl.dart`).
 - `lib/application/dashboard_bundle_codec.dart` — 캐시 JSON ↔ `DashboardBundle`.
 - 스테이징/프로덕션: **`--dart-define=API_BASE_URL=https://...`** 필수(미설정 시 HTTP 구성 오류). `GET /v1/health` 연결 진단은 오류 화면에서 선택.
 
@@ -42,6 +42,7 @@
 - Application: `test/application/dashboard_bundle_codec_test.dart` — 오프라인 캐시 JSON 라운드트립.
 - Infra: `test/infrastructure/dashboard_json_mapper_test.dart` — REST JSON 매핑.
 - Infra: `test/infrastructure/http_retry_policy_test.dart` — 503 재시도·404 비재시도.
+- Infra: `test/infrastructure/shared_preferences_dashboard_bundle_cache_test.dart` — 캐시 TTL.
 - 릴리즈 전: `flutter analyze`, `flutter test`, 수동 3패널 회귀.
 
 ## Legacy 제거
