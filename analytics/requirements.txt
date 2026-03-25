@@ -2,3 +2,4 @@ numpy>=1.26
 pandas>=2.1
 openai>=1.40
 supabase>=2.4
+openpyxl>=3.1

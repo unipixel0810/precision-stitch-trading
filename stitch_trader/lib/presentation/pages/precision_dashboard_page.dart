@@ -9,6 +9,7 @@ import 'package:stitch_trader/domain/dashboard_contracts.dart';
 
 import '../constants/remote_chart_assets.dart';
 import '../theme/stitch_colors.dart';
+import 'analytics_performance_tab.dart';
 
 class PrecisionDashboardPage extends StatefulWidget {
   const PrecisionDashboardPage({super.key, required this.module, this.environment = AppEnvironment.development});
@@ -33,6 +34,8 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
   final TextEditingController _trailingCtrl = TextEditingController();
   int _botPreset = 0;
   int _drawTool = 1;
+  /// 0 포트폴리오, 1 주문현황, 2 성과분석, 3 로그
+  int _mainNavIndex = 0;
 
   TextStyle get _headline => GoogleFonts.manrope(color: StitchColors.onSurface);
   TextStyle get _label => GoogleFonts.inter(color: StitchColors.onSurfaceVariant);
@@ -267,45 +270,62 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverToBoxAdapter(child: _topNav()),
-                if (_bundle!.servedFromCache) SliverToBoxAdapter(child: _offlineSnapshotBanner()),
-                SliverFillRemaining(
-                  hasScrollBody: true,
-                  child: LayoutBuilder(
-                    builder: (context, c) {
-                      final vw = c.maxWidth.isFinite ? c.maxWidth : _dashboardMinContentWidth;
-                      final contentW = vw < _dashboardMinContentWidth ? _dashboardMinContentWidth : vw;
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Positioned.fill(child: CustomPaint(painter: _GridDotsPainter())),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              primary: false,
-                              child: SizedBox(
-                                width: contentW,
-                                height: c.maxHeight,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    SizedBox(width: _sideWidth, child: _scannerPanel()),
-                                    Expanded(child: _chartPanel()),
-                                    SizedBox(width: _sideWidth, child: _controllerPanel()),
-                                  ],
+                if (_mainNavIndex == 0 && _bundle!.servedFromCache)
+                  SliverToBoxAdapter(child: _offlineSnapshotBanner()),
+                if (_mainNavIndex == 0)
+                  SliverFillRemaining(
+                    hasScrollBody: true,
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        final vw = c.maxWidth.isFinite ? c.maxWidth : _dashboardMinContentWidth;
+                        final contentW = vw < _dashboardMinContentWidth ? _dashboardMinContentWidth : vw;
+                        return Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Positioned.fill(child: CustomPaint(painter: _GridDotsPainter())),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                primary: false,
+                                child: SizedBox(
+                                  width: contentW,
+                                  height: c.maxHeight,
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      SizedBox(width: _sideWidth, child: _scannerPanel()),
+                                      Expanded(child: _chartPanel()),
+                                      SizedBox(width: _sideWidth, child: _controllerPanel()),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
+                          ],
+                        );
+                      },
+                    ),
+                  )
+                else if (_mainNavIndex == 2)
+                  const SliverFillRemaining(
+                    hasScrollBody: true,
+                    child: AnalyticsPerformanceTab(),
+                  )
+                else
+                  SliverFillRemaining(
+                    hasScrollBody: true,
+                    child: Center(
+                      child: Text(
+                        '준비 중입니다',
+                        style: GoogleFonts.inter(color: StitchColors.onSurfaceVariant, fontSize: 15),
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
-          _LatencyToast(telemetry: _bundle!.telemetry),
+          if (_mainNavIndex == 0) _LatencyToast(telemetry: _bundle!.telemetry),
         ],
       ),
     );
@@ -418,10 +438,10 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                 spacing: 32,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  _navLink('포트폴리오', active: true),
-                  _navLink('주문현황'),
-                  _navLink('성과분석'),
-                  _navLink('로그'),
+                  _navLink('포트폴리오', index: 0),
+                  _navLink('주문현황', index: 1),
+                  _navLink('성과분석', index: 2),
+                  _navLink('로그', index: 3),
                 ],
               ),
             ),
@@ -504,9 +524,10 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
     );
   }
 
-  Widget _navLink(String label, {bool active = false}) {
+  Widget _navLink(String label, {required int index}) {
+    final active = _mainNavIndex == index;
     return TextButton(
-      onPressed: () {},
+      onPressed: () => setState(() => _mainNavIndex = index),
       style: TextButton.styleFrom(
         padding: EdgeInsets.zero,
         minimumSize: Size.zero,
