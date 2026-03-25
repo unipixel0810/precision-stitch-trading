@@ -16,13 +16,12 @@
 
 ```
 lib/
-  main.dart                 # 진입점·MaterialApp·테마(최소) — Phase 3 이후 조립만 증가
+  main.dart                 # 진입점·환경(`APP_ENV`)·저장소 팩토리·DashboardModule 주입
+  app/                      # AppEnvironment, DashboardModule, RepositoryFactory (composition)
   domain/                   # 순수 Dart, 외부 package import 금지
   application/              # 유스케이스, domain만 의존
-  infrastructure/           # Port 구현, API/DB/키움 등
-  presentation/             # pages, widgets, theme (목표 위치)
-  screens/                  # 레거시 — Phase 3에서 presentation으로 이전 후 제거
-  theme/                    # 레거시 — Phase 3에서 presentation/theme 으로 이전
+  infrastructure/           # Port 구현(Fake / Remote 스텁)
+  presentation/             # pages, widgets, theme (`pages/precision_dashboard_page.dart` 등)
 ```
 
 ### 1.3 DI(의존성 주입) 합의
@@ -39,13 +38,11 @@ lib/
 
 ## 2. 프론트 (Frontend) — 문서만
 
-| 항목 | 현재 (P0) | 목표 (P3~) |
-|------|-----------|------------|
-| 홈 화면 | `lib/screens/precision_dashboard_screen.dart` | `lib/presentation/pages/…` |
-| 색·타이포 토큰 | `lib/theme/stitch_colors.dart` | `lib/presentation/theme/…` |
-| 앱 셸 | `lib/main.dart` 내 `StitchTraderApp` | 동일 파일 또는 `lib/presentation/app.dart` 분리 |
-
-P0에서는 **파일 이동 없음**. 위 표만 계약으로 삼는다.
+| 항목 | 위치 (이행 완료) |
+|------|------------------|
+| 홈 화면 | `lib/presentation/pages/precision_dashboard_page.dart` |
+| 색·타이포 토큰 | `lib/presentation/theme/stitch_colors.dart` (`Color.fade` 확장 포함) |
+| 앱 셸 | `lib/main.dart` → `StitchTraderApp`, 환경별 `DashboardRepositoryFactory` |
 
 ---
 
@@ -63,8 +60,8 @@ P0에서는 **파일 이동 없음**. 위 표만 계약으로 삼는다.
 
 | 항목 | 결과 (기록 시점) |
 |------|------------------|
-| `flutter analyze` | **0 errors / 0 warnings** — info 레벨: `withOpacity` deprecated 등 약 67건 (`precision_dashboard_screen.dart` 중심). Phase 3 이후 점진 정리. |
-| `flutter test` | 스모크 1건 통과(대시보드 제목). |
+| `flutter analyze` | **No issues found** (대시보드·테마 `withOpacity` → `Color.fade`/`withValues` 정리). |
+| `flutter test` | 스모크 1건 + `test/application/use_cases_test.dart` (Load/Update 유스케이스). |
 | Clean import | P1 완료 후 `domain/` 에 `package:` 금지 자동 검증 도입 권장. |
 
 ---

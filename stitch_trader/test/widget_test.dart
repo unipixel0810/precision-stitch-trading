@@ -21,5 +21,6 @@ void main() {
     await tester.pumpWidget(StitchTraderApp(dashboardModule: module));
     await tester.pump();
     expect(find.text('AutoTrader'), findsOneWidget);
+    expect(find.text('DEV'), findsOneWidget);
   });
 }

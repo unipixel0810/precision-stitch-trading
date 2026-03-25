@@ -20,14 +20,21 @@
 
 ## Phase 5 — DI · 환경
 
-- `lib/app/app_environment.dart` — dev / staging / production.
+- `lib/app/app_environment.dart` — dev / staging / production (`shortLabel`: DEV/STG/PRD).
 - `lib/app/dashboard_repository_factory.dart` — 환경별 저장소 세트.
 - `lib/app/dashboard_module.dart` — 유스케이스 묶음.
 - `lib/app/dashboard_repositories.dart` — Port 홀더.
 
+### 실행 환경 전환 (`APP_ENV`)
+
+`main.dart`에서 `--dart-define=APP_ENV=staging` 또는 `production` 으로 주입한다. 미지정 시 `development`(Fake 저장소).
+
+- **staging / production:** 현재 `remote/*` 저장소는 `UnimplementedError` 등으로 실패할 수 있음 → 대시보드 **전면 오류 + 다시 시도**, 리스크 저장·새로고침 실패 시 **SnackBar**.
+
 ## Phase 6 — QA
 
 - 스모크: `test/widget_test.dart` — `StitchTraderApp` + `AutoTrader` 헤더.
+- Application: `test/application/use_cases_test.dart` — `LoadDashboardBundle`, `UpdateRiskSettings` (Fake Port).
 - 릴리즈 전: `flutter analyze`, `flutter test`, 수동 3패널 회귀.
 
 ## Legacy 제거

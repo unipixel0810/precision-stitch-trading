@@ -9,20 +9,31 @@ import 'package:stitch_trader/domain/dashboard_contracts.dart';
 import 'package:stitch_trader/presentation/pages/precision_dashboard_page.dart';
 import 'package:stitch_trader/presentation/theme/stitch_colors.dart';
 
+AppEnvironment _appEnvironmentFromDefine() {
+  const raw = String.fromEnvironment('APP_ENV', defaultValue: 'development');
+  return switch (raw.toLowerCase()) {
+    'staging' || 'stage' => AppEnvironment.staging,
+    'production' || 'prod' => AppEnvironment.production,
+    _ => AppEnvironment.development,
+  };
+}
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  final repos = DashboardRepositoryFactory.create(AppEnvironment.development);
+  final environment = _appEnvironmentFromDefine();
+  final repos = DashboardRepositoryFactory.create(environment);
   final module = DashboardModule.fromRepositories(
     repos,
     defaultSymbol: SymbolCode('005380'),
   );
-  runApp(StitchTraderApp(dashboardModule: module));
+  runApp(StitchTraderApp(dashboardModule: module, environment: environment));
 }
 
 class StitchTraderApp extends StatelessWidget {
-  const StitchTraderApp({super.key, required this.dashboardModule});
+  const StitchTraderApp({super.key, required this.dashboardModule, this.environment = AppEnvironment.development});
 
   final DashboardModule dashboardModule;
+  final AppEnvironment environment;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +57,7 @@ class StitchTraderApp extends StatelessWidget {
         textTheme: display,
         iconTheme: const IconThemeData(color: StitchColors.onSurfaceVariant),
       ),
-      home: PrecisionDashboardPage(module: dashboardModule),
+      home: PrecisionDashboardPage(module: dashboardModule, environment: environment),
     );
   }
 }

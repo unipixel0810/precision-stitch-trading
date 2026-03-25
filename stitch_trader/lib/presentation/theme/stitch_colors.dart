@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+/// 기존 opacity 곱과 동일한 알파 처리(`withValues`), Flutter 3.27+ 권장.
+extension StitchColorFade on Color {
+  Color fade(double factor) => withValues(alpha: (a * factor).clamp(0.0, 1.0));
+}
+
 /// Kiwoom 0624 / Precision Stitch palette (Tailwind HTML parity + design.md)
 abstract final class StitchColors {
   static const Color background = Color(0xFF131313);

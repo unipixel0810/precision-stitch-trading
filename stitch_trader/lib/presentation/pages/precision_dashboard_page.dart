@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:stitch_trader/app/app_environment.dart';
 import 'package:stitch_trader/app/dashboard_module.dart';
 import 'package:stitch_trader/application/models/dashboard_bundle.dart';
 import 'package:stitch_trader/domain/dashboard_contracts.dart';
@@ -10,9 +11,10 @@ import '../constants/remote_chart_assets.dart';
 import '../theme/stitch_colors.dart';
 
 class PrecisionDashboardPage extends StatefulWidget {
-  const PrecisionDashboardPage({super.key, required this.module});
+  const PrecisionDashboardPage({super.key, required this.module, this.environment = AppEnvironment.development});
 
   final DashboardModule module;
+  final AppEnvironment environment;
 
   @override
   State<PrecisionDashboardPage> createState() => _PrecisionDashboardPageState();
@@ -23,6 +25,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
 
   DashboardBundle? _bundle;
   bool _loading = true;
+  Object? _loadError;
 
   double _tpPercent = 3.5;
   double _slPercent = 1.2;
@@ -40,16 +43,39 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
   }
 
   Future<void> _load() async {
-    final b = await widget.module.loadDashboard.call();
-    if (!mounted) return;
     setState(() {
-      _bundle = b;
-      _loading = false;
-      _tpPercent = b.riskSettings.takeProfitPercent;
-      _slPercent = b.riskSettings.stopLossPercentMagnitude;
-      _trailingCtrl.text = b.riskSettings.trailingStopPercent.toString();
-      _botPreset = b.riskSettings.botSplit == BotSplitPreset.three ? 0 : 1;
+      _loading = true;
+      _loadError = null;
     });
+    try {
+      final b = await widget.module.loadDashboard.call();
+      if (!mounted) return;
+      setState(() {
+        _bundle = b;
+        _loading = false;
+        _loadError = null;
+        _tpPercent = b.riskSettings.takeProfitPercent;
+        _slPercent = b.riskSettings.stopLossPercentMagnitude;
+        _trailingCtrl.text = b.riskSettings.trailingStopPercent.toString();
+        _botPreset = b.riskSettings.botSplit == BotSplitPreset.three ? 0 : 1;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        if (_bundle == null) {
+          _loadError = e;
+        }
+      });
+      if (_bundle != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('데이터 새로고침 실패: $e'),
+            backgroundColor: StitchColors.errorContainer,
+          ),
+        );
+      }
+    }
   }
 
   RiskSettings _riskFromForm() {
@@ -64,8 +90,15 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
   }
 
   Future<void> _persistRisk() async {
-    await widget.module.updateRiskSettings.call(_riskFromForm());
-    await _load();
+    try {
+      await widget.module.updateRiskSettings.call(_riskFromForm());
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('설정 저장 실패: $e'), backgroundColor: StitchColors.errorContainer),
+      );
+    }
   }
 
   static String _formatKrw(int n) {
@@ -144,6 +177,42 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loadError != null && _bundle == null) {
+      return Scaffold(
+        backgroundColor: StitchColors.surface,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.cloud_off_outlined, size: 48, color: StitchColors.error.fade(0.9)),
+                  const SizedBox(height: 16),
+                  Text(
+                    '대시보드를 불러오지 못했습니다',
+                    textAlign: TextAlign.center,
+                    style: _headline.copyWith(fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$_loadError',
+                    textAlign: TextAlign.center,
+                    style: _label.copyWith(fontSize: 12, color: StitchColors.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: _load,
+                    child: const Text('다시 시도'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     if (_loading || _bundle == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -186,7 +255,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
       child: Container(
         height: 64,
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: StitchColors.primaryContainer.withOpacity(0.2))),
+          border: Border(bottom: BorderSide(color: StitchColors.primaryContainer.fade(0.2))),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Row(
@@ -200,7 +269,39 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                 color: StitchColors.primaryContainer,
               ),
             ),
-            const SizedBox(width: 40),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: switch (widget.environment) {
+                      AppEnvironment.production => StitchColors.surfaceContainerHigh.fade(0.8),
+                      AppEnvironment.staging => StitchColors.tertiaryContainer.fade(0.2),
+                      AppEnvironment.development => StitchColors.primaryContainer.fade(0.12),
+                    },
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: switch (widget.environment) {
+                        AppEnvironment.production => StitchColors.outlineVariant.fade(0.5),
+                        AppEnvironment.staging => StitchColors.tertiaryContainer.fade(0.5),
+                        AppEnvironment.development => StitchColors.primaryContainer.fade(0.35),
+                      },
+                ),
+              ),
+              child: Text(
+                widget.environment.shortLabel,
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1,
+                  color: switch (widget.environment) {
+                        AppEnvironment.production => StitchColors.onSurfaceVariant,
+                        AppEnvironment.staging => StitchColors.tertiaryContainer,
+                        AppEnvironment.development => StitchColors.primaryContainer,
+                      },
+                ),
+              ),
+            ),
+            const SizedBox(width: 28),
             Expanded(
               child: Wrap(
                 spacing: 32,
@@ -218,7 +319,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
               decoration: BoxDecoration(
                 color: StitchColors.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: StitchColors.primaryContainer.withOpacity(0.1)),
+                border: Border.all(color: StitchColors.primaryContainer.fade(0.1)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -230,7 +331,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                     style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w700, color: StitchColors.onSurface),
                   ),
                   const SizedBox(width: 16),
-                  Container(width: 1, height: 12, color: StitchColors.outlineVariant.withOpacity(0.3)),
+                  Container(width: 1, height: 12, color: StitchColors.outlineVariant.fade(0.3)),
                   const SizedBox(width: 16),
                   Icon(Icons.cloud_done_outlined, size: 18, color: StitchColors.tertiaryContainer),
                   const SizedBox(width: 8),
@@ -301,9 +402,9 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: StitchColors.surfaceContainer.withOpacity(0.3),
+              color: StitchColors.surfaceContainer.fade(0.3),
               border: Border(
-                bottom: BorderSide(color: StitchColors.primary.withOpacity(0.3)),
+                bottom: BorderSide(color: StitchColors.primary.fade(0.3)),
               ),
             ),
             child: Row(
@@ -351,7 +452,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                 ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: StitchColors.primaryContainer,
-                  side: BorderSide(color: StitchColors.primaryContainer.withOpacity(0.3)),
+                  side: BorderSide(color: StitchColors.primaryContainer.fade(0.3)),
                   backgroundColor: StitchColors.surface,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
@@ -374,7 +475,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
     required String thumb,
     bool viLeftRail = false,
   }) {
-    final cyanEdge = StitchColors.primaryContainer.withOpacity(0.3);
+    final cyanEdge = StitchColors.primaryContainer.fade(0.3);
 
     return Material(
       color: Colors.transparent,
@@ -388,9 +489,9 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
               Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: StitchColors.surfaceContainerHigh.withOpacity(0.4),
+                    color: StitchColors.surfaceContainerHigh.fade(0.4),
                     border: Border.all(
-                      color: viLeftRail ? cyanEdge : StitchColors.outlineVariant.withOpacity(0.05),
+                      color: viLeftRail ? cyanEdge : StitchColors.outlineVariant.fade(0.05),
                     ),
                   ),
                 ),
@@ -451,7 +552,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                   width: double.infinity,
                   child: Opacity(
                     opacity: 0.6,
-                    child: Image.network(thumb, fit: BoxFit.cover, errorBuilder: (_, __, ___) => ColoredBox(color: StitchColors.surfaceContainerLowest)),
+                    child: Image.network(thumb, fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: StitchColors.surfaceContainerLowest)),
                   ),
                 ),
               ),
@@ -468,11 +569,11 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
   Widget _scannerBadge(String text, _BadgeAccent accent) {
     final (bg, fg) = switch (accent) {
       _BadgeAccent.primary => (
-          StitchColors.primaryContainer.withOpacity(0.1),
+          StitchColors.primaryContainer.fade(0.1),
           StitchColors.primaryContainer,
         ),
       _BadgeAccent.tertiary => (
-          StitchColors.tertiaryContainer.withOpacity(0.1),
+          StitchColors.tertiaryContainer.fade(0.1),
           StitchColors.tertiaryContainer,
         ),
     };
@@ -489,24 +590,24 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
   Widget _chip(_ChipData data) {
     final style = switch (data.tone) {
       _ChipTone.primary => (
-          StitchColors.primaryContainer.withOpacity(0.1),
+          StitchColors.primaryContainer.fade(0.1),
           StitchColors.primaryContainer,
-          StitchColors.primaryContainer.withOpacity(0.2),
+          StitchColors.primaryContainer.fade(0.2),
         ),
       _ChipTone.tertiary => (
-          StitchColors.tertiaryContainer.withOpacity(0.1),
+          StitchColors.tertiaryContainer.fade(0.1),
           StitchColors.tertiaryContainer,
-          StitchColors.tertiaryContainer.withOpacity(0.2),
+          StitchColors.tertiaryContainer.fade(0.2),
         ),
       _ChipTone.muted => (
-          StitchColors.outlineVariant.withOpacity(0.2),
+          StitchColors.outlineVariant.fade(0.2),
           StitchColors.onSurfaceVariant,
-          StitchColors.outlineVariant.withOpacity(0.2),
+          StitchColors.outlineVariant.fade(0.2),
         ),
       _ChipTone.error => (
-          StitchColors.errorContainer.withOpacity(0.2),
+          StitchColors.errorContainer.fade(0.2),
           StitchColors.error,
-          StitchColors.error.withOpacity(0.2),
+          StitchColors.error.fade(0.2),
         ),
     };
     return Container(
@@ -542,8 +643,8 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: StitchColors.surfaceContainerLowest.withOpacity(0.5),
-        border: Border(bottom: BorderSide(color: StitchColors.primaryContainer.withOpacity(0.1))),
+        color: StitchColors.surfaceContainerLowest.fade(0.5),
+        border: Border(bottom: BorderSide(color: StitchColors.primaryContainer.fade(0.1))),
       ),
       child: Row(
         children: [
@@ -562,7 +663,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
             ),
           ),
           const SizedBox(width: 16),
-          Container(width: 1, height: 16, color: StitchColors.outlineVariant.withOpacity(0.3)),
+          Container(width: 1, height: 16, color: StitchColors.outlineVariant.fade(0.3)),
           const SizedBox(width: 12),
           Expanded(
             child: SingleChildScrollView(
@@ -583,9 +684,9 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: StitchColors.primaryContainer.withOpacity(0.1),
+              color: StitchColors.primaryContainer.fade(0.1),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: StitchColors.primaryContainer.withOpacity(0.2)),
+              border: Border.all(color: StitchColors.primaryContainer.fade(0.2)),
             ),
             child: Text(
               'ALT + 드래그하여 매수 라인 생성',
@@ -598,7 +699,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
             ),
           ),
           const SizedBox(width: 12),
-          Container(width: 1, height: 16, color: StitchColors.outlineVariant.withOpacity(0.3)),
+          Container(width: 1, height: 16, color: StitchColors.outlineVariant.fade(0.3)),
           const SizedBox(width: 12),
           Text(
             '5M 정밀 뷰',
@@ -641,7 +742,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
         color: active ? StitchColors.surfaceContainerHigh : Colors.transparent,
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: active ? StitchColors.primaryContainer.withOpacity(0.4) : StitchColors.outlineVariant.withOpacity(0.2),
+          color: active ? StitchColors.primaryContainer.fade(0.4) : StitchColors.outlineVariant.fade(0.2),
         ),
       ),
       child: Row(
@@ -675,7 +776,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                 child: Image.network(
                   _bundle!.chartBackgroundUri.isNotEmpty ? _bundle!.chartBackgroundUri : RemoteChartAssets.chartMain,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => ColoredBox(color: StitchColors.chartBackdrop),
+                  errorBuilder: (_, _, _) => ColoredBox(color: StitchColors.chartBackdrop),
                 ),
               ),
               Positioned.fill(
@@ -703,7 +804,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: StitchColors.glassPanel,
-                        border: Border.all(color: StitchColors.primaryContainer.withOpacity(0.3)),
+                        border: Border.all(color: StitchColors.primaryContainer.fade(0.3)),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Column(
@@ -720,9 +821,9 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: StitchColors.primaryContainer.withOpacity(0.1),
+                                  color: StitchColors.primaryContainer.fade(0.1),
                                   borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: StitchColors.primaryContainer.withOpacity(0.2)),
+                                  border: Border.all(color: StitchColors.primaryContainer.fade(0.2)),
                                 ),
                                 child: Text(
                                   '실시간 동기화',
@@ -757,7 +858,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Divider(color: StitchColors.outlineVariant.withOpacity(0.1), height: 1),
+                          Divider(color: StitchColors.outlineVariant.fade(0.1), height: 1),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -816,7 +917,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               if (emphasized) ...[
-                Container(width: 96, height: 1, color: StitchColors.primaryContainer.withOpacity(0.5)),
+                Container(width: 96, height: 1, color: StitchColors.primaryContainer.fade(0.5)),
                 const SizedBox(width: 8),
               ],
               Container(
@@ -824,9 +925,9 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                 decoration: BoxDecoration(
                   color: emphasized ? StitchColors.primaryContainer : StitchColors.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: StitchColors.primaryContainer.withOpacity(emphasized ? 0 : 0.4)),
+                  border: Border.all(color: StitchColors.primaryContainer.fade(emphasized ? 0 : 0.4)),
                   boxShadow: emphasized
-                      ? [BoxShadow(color: StitchColors.primaryContainer.withOpacity(0.25), blurRadius: 12)]
+                      ? [BoxShadow(color: StitchColors.primaryContainer.fade(0.25), blurRadius: 12)]
                       : null,
                 ),
                 child: Text(
@@ -862,8 +963,8 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
               decoration: BoxDecoration(
                 color: StitchColors.errorContainer,
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: StitchColors.error.withOpacity(0.3)),
-                boxShadow: [BoxShadow(color: StitchColors.error.withOpacity(0.15), blurRadius: 12)],
+                border: Border.all(color: StitchColors.error.fade(0.3)),
+                boxShadow: [BoxShadow(color: StitchColors.error.fade(0.15), blurRadius: 12)],
               ),
               child: Text(
                 bannerText,
@@ -898,7 +999,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
             decoration: BoxDecoration(
               color: StitchColors.tertiaryContainer,
               borderRadius: BorderRadius.circular(4),
-              boxShadow: [BoxShadow(color: StitchColors.tertiaryContainer.withOpacity(0.3), blurRadius: 10)],
+              boxShadow: [BoxShadow(color: StitchColors.tertiaryContainer.fade(0.3), blurRadius: 10)],
             ),
             child: Text(
               'VI 발동 구간',
@@ -911,7 +1012,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
           ),
           CustomPaint(
             size: const Size(2, 128),
-            painter: _VerticalDashedPainter(color: StitchColors.tertiaryContainer.withOpacity(0.5)),
+            painter: _VerticalDashedPainter(color: StitchColors.tertiaryContainer.fade(0.5)),
           ),
         ],
       ),
@@ -950,7 +1051,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: StitchColors.surfaceContainerLowest,
-        border: Border(top: BorderSide(color: StitchColors.primaryContainer.withOpacity(0.1))),
+        border: Border(top: BorderSide(color: StitchColors.primaryContainer.fade(0.1))),
       ),
       child: Row(
         children: [
@@ -962,7 +1063,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
           const SizedBox(width: 16),
           ohlcKV('C', _formatKrw(o.closeKrw)),
           const SizedBox(width: 24),
-          Container(width: 1, height: 12, color: StitchColors.outlineVariant.withOpacity(0.3)),
+          Container(width: 1, height: 12, color: StitchColors.outlineVariant.fade(0.3)),
           const SizedBox(width: 16),
           ohlcKV('Vol', o.volumeDescription, highlight: StitchColors.primaryContainer),
           const SizedBox(width: 16),
@@ -992,8 +1093,8 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: StitchColors.surfaceContainer.withOpacity(0.3),
-              border: Border(bottom: BorderSide(color: StitchColors.primaryContainer.withOpacity(0.1))),
+              color: StitchColors.surfaceContainer.fade(0.3),
+              border: Border(bottom: BorderSide(color: StitchColors.primaryContainer.fade(0.1))),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1012,9 +1113,9 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: StitchColors.primaryContainer.withOpacity(0.1),
+                        color: StitchColors.primaryContainer.fade(0.1),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: StitchColors.primaryContainer.withOpacity(0.2)),
+                        border: Border.all(color: StitchColors.primaryContainer.fade(0.2)),
                       ),
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
@@ -1056,7 +1157,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                       style: GoogleFonts.inter(
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
-                        color: StitchColors.primaryContainer.withOpacity(0.7),
+                        color: StitchColors.primaryContainer.fade(0.7),
                       ),
                     ),
                   ],
@@ -1132,11 +1233,11 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                         fillColor: StitchColors.surfaceContainerHighest,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: StitchColors.outlineVariant.withOpacity(0.2)),
+                          borderSide: BorderSide(color: StitchColors.outlineVariant.fade(0.2)),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: StitchColors.outlineVariant.withOpacity(0.2)),
+                          borderSide: BorderSide(color: StitchColors.outlineVariant.fade(0.2)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
@@ -1152,7 +1253,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                Divider(color: StitchColors.outlineVariant.withOpacity(0.1), height: 1),
+                Divider(color: StitchColors.outlineVariant.fade(0.1), height: 1),
                 const SizedBox(height: 16),
                 Text('안전장치', style: _label.copyWith(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
                 const SizedBox(height: 12),
@@ -1161,7 +1262,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                   decoration: BoxDecoration(
                     color: StitchColors.surfaceContainerLowest,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: StitchColors.primaryContainer.withOpacity(0.05)),
+                    border: Border.all(color: StitchColors.primaryContainer.fade(0.05)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1180,7 +1281,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                               decoration: BoxDecoration(
                                 color: StitchColors.surfaceContainer,
                                 borderRadius: BorderRadius.circular(4),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)],
+                                boxShadow: [BoxShadow(color: Colors.black.fade(0.2), blurRadius: 4)],
                               ),
                               child: Text(
                                 'MARKET',
@@ -1206,7 +1307,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: StitchColors.primaryContainer.withOpacity(0.15))),
+              border: Border(top: BorderSide(color: StitchColors.primaryContainer.fade(0.15))),
             ),
             child: Column(
               children: [
@@ -1214,7 +1315,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                   decoration: BoxDecoration(
                     gradient: StitchColors.primaryCtaGradient,
                     borderRadius: BorderRadius.circular(4),
-                    boxShadow: [BoxShadow(color: StitchColors.primaryContainer.withOpacity(0.2), blurRadius: 16)],
+                    boxShadow: [BoxShadow(color: StitchColors.primaryContainer.fade(0.2), blurRadius: 16)],
                   ),
                   child: Material(
                     color: Colors.transparent,
@@ -1248,7 +1349,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
                       decoration: BoxDecoration(
                         color: StitchColors.primaryContainer,
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: StitchColors.primaryContainer.withOpacity(0.4), blurRadius: 6)],
+                        boxShadow: [BoxShadow(color: StitchColors.primaryContainer.fade(0.4), blurRadius: 6)],
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1292,14 +1393,14 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: StitchColors.surfaceContainerHigh.withOpacity(active ? 0.6 : 0.3),
+          color: StitchColors.surfaceContainerHigh.fade(active ? 0.6 : 0.3),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
             color: active ? StitchColors.primaryContainer : Colors.transparent,
             width: 2,
           ),
           boxShadow: active
-              ? [BoxShadow(color: StitchColors.primaryContainer.withOpacity(0.15), blurRadius: 15)]
+              ? [BoxShadow(color: StitchColors.primaryContainer.fade(0.15), blurRadius: 15)]
               : null,
         ),
         child: Column(
@@ -1349,7 +1450,7 @@ class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         backgroundColor: on ? StitchColors.surface : StitchColors.surfaceContainerLowest,
         side: BorderSide(
-          color: on ? StitchColors.primaryContainer : StitchColors.outlineVariant.withOpacity(0.3),
+          color: on ? StitchColors.primaryContainer : StitchColors.outlineVariant.fade(0.3),
           width: on ? 2 : 1,
         ),
         foregroundColor: on ? StitchColors.primaryContainer : StitchColors.onSurfaceVariant,
@@ -1373,7 +1474,7 @@ enum _ChipTone { primary, tertiary, muted, error }
 class _GridDotsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = StitchColors.primaryContainer.withOpacity(0.03);
+    final p = Paint()..color = StitchColors.primaryContainer.fade(0.03);
     for (double x = 0; x < size.width; x += 32) {
       for (double y = 0; y < size.height; y += 32) {
         canvas.drawCircle(Offset(x, y), 1, p);
@@ -1398,7 +1499,7 @@ class _DashedHLinesPainter extends CustomPainter {
       final op = i < opacities.length ? opacities[i] : 1.0;
       final y = size.height * frac;
       final paint = Paint()
-        ..color = StitchColors.primaryContainer.withOpacity(op)
+        ..color = StitchColors.primaryContainer.fade(op)
         ..strokeWidth = 1.2
         ..style = PaintingStyle.stroke;
       const dash = 6.0;
@@ -1463,10 +1564,10 @@ class _LatencyToast extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                 decoration: BoxDecoration(
-                  color: StitchColors.surfaceContainerHigh.withOpacity(0.9),
+                  color: StitchColors.surfaceContainerHigh.fade(0.9),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: StitchColors.primaryContainer.withOpacity(0.3)),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 24)],
+                  border: Border.all(color: StitchColors.primaryContainer.fade(0.3)),
+                  boxShadow: [BoxShadow(color: Colors.black.fade(0.5), blurRadius: 24)],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1483,7 +1584,7 @@ class _LatencyToast extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Container(width: 1, height: 12, color: StitchColors.outlineVariant.withOpacity(0.3)),
+                    Container(width: 1, height: 12, color: StitchColors.outlineVariant.fade(0.3)),
                     const SizedBox(width: 12),
                     Text(
                       'API: ${telemetry.apiLabel}',
@@ -1495,7 +1596,7 @@ class _LatencyToast extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Container(width: 1, height: 12, color: StitchColors.outlineVariant.withOpacity(0.3)),
+                    Container(width: 1, height: 12, color: StitchColors.outlineVariant.fade(0.3)),
                     const SizedBox(width: 12),
                     Text(
                       telemetry.tickSnapApplied ? '틱 단위 스냅 적용' : '틱 스냅 미적용',
