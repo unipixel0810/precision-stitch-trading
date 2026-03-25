@@ -21,4 +21,20 @@ final class RiskSettings {
   final double trailingStopPercent;
   final BotSplitPreset botSplit;
   final OrderKind orderKind;
+
+  RiskSettings copyWith({
+    double? takeProfitPercent,
+    double? stopLossPercentMagnitude,
+    double? trailingStopPercent,
+    BotSplitPreset? botSplit,
+    OrderKind? orderKind,
+  }) {
+    return RiskSettings(
+      takeProfitPercent: takeProfitPercent ?? this.takeProfitPercent,
+      stopLossPercentMagnitude: stopLossPercentMagnitude ?? this.stopLossPercentMagnitude,
+      trailingStopPercent: trailingStopPercent ?? this.trailingStopPercent,
+      botSplit: botSplit ?? this.botSplit,
+      orderKind: orderKind ?? this.orderKind,
+    );
+  }
 }

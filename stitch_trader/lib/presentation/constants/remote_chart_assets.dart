@@ -1,0 +1,11 @@
+/// 차트·스캐너 썸네일 원격 URI (presentation 상수). domain에는 문자열만 저장.
+abstract final class RemoteChartAssets {
+  static const String chartMain =
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuD7GhFL0nDpRKpHSqWh-H4KvTDNP_Ry5TZyBLVwvFrkGgAHxCK-w8HVn7d5ot4qpCAMxmolSvtckB0f1-5GNRMv6F1tWlKAfxi77hRyOI1bPQ8Y4IEeAOnkojMMPqLoN2Eo36S5yQaPt6OXjbBAP-dtZZnnNPbWPGMIgQB47xb11QPRbbJZxkSwnGoqi8ASJi_blobZ-zY9-DPtu9amwvlb60O-AqdgVlH7107TPAoIo4pndgponRlVrBIMccy4Jc3oHdr_SJZ0cj0l';
+  static const String scanner1 =
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuBLKRcegH7GaGhlpyRtVM0uPCC2tu-6qi843dfcMe9pymorbU0S0E_a8eQPm_lXU_4V2d0VKo5-9UcI8oLUW-7K-KGxJJWlsckDsKsY0a4rEHN-OeCo5pMlwWV9sU36vAxJNomC4zMPSujn2j7mkdTOG_REKJpXTWiw14yideDgpHvu_SgdbLM16o4UQSBs_KRE1sMY_lpAZViWpWnJ9PcYeVqhcf8ekUZ_SsKpn7yt5LcEq_dpyoIIV9aYdUQYypl1G_pw0A4I9LcB';
+  static const String scanner2 =
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuBvJmPX7sKq98YgUQj6EkI01gmT-Tv9tgLNNCkKfa6vp5iL1TxYh7wpTLgUOs4CcGN3Z3_iSqVY30f-62g695nDTZ0D9nq4svsMLdFnkinClLqk3HiMLx-wtyMrkWLTt92RmhygbIMr5lpgEeJP_doNbcCHO516iBOY9Dt-md77IUoOCDyQZ6jbmChpFu2CPk5RceBHTpVMKrTC1NhjNbJeIQtDk-v-BJI1a8Czjimt0LqjlYeZB9pwdzG0dhA64Ud53Y9k824BONr2';
+  static const String scanner3 =
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuDr7d4B_DgLpc-1hveuU261eMnInn-OghBp31vVjdY7kDAU44UTgNNnR22PIO4pvjz5jYhYY9_k8i4ri9X9N7g8cVOt-aG9VxRVTz6VaGLAu69iT7vhCYRUnD5sQ-buW5gXdTSSKYoZNa-6fMuDkr9z3dz2wchc8YSHjLaF0WzOtJhljD5fugfZYPTuYpjDcHwcOo0RHKsdxci-jlOlFvqb4FibttZYIS8LwN9dA2PuJ_qvBYzJdyoBmiHTmsTUAc-hiAV_yfWLgSaZ';
+}

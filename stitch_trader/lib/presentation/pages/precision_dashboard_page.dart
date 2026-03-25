@@ -2,39 +2,139 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:stitch_trader/app/dashboard_module.dart';
+import 'package:stitch_trader/application/models/dashboard_bundle.dart';
+import 'package:stitch_trader/domain/dashboard_contracts.dart';
 
+import '../constants/remote_chart_assets.dart';
 import '../theme/stitch_colors.dart';
 
-/// Remote chart thumbnails (HTML parity).
-abstract final class StitchImageUrls {
-  static const String chartMain =
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuD7GhFL0nDpRKpHSqWh-H4KvTDNP_Ry5TZyBLVwvFrkGgAHxCK-w8HVn7d5ot4qpCAMxmolSvtckB0f1-5GNRMv6F1tWlKAfxi77hRyOI1bPQ8Y4IEeAOnkojMMPqLoN2Eo36S5yQaPt6OXjbBAP-dtZZnnNPbWPGMIgQB47xb11QPRbbJZxkSwnGoqi8ASJi_blobZ-zY9-DPtu9amwvlb60O-AqdgVlH7107TPAoIo4pndgponRlVrBIMccy4Jc3oHdr_SJZ0cj0l';
-  static const String scanner1 =
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBLKRcegH7GaGhlpyRtVM0uPCC2tu-6qi843dfcMe9pymorbU0S0E_a8eQPm_lXU_4V2d0VKo5-9UcI8oLUW-7K-KGxJJWlsckDsKsY0a4rEHN-OeCo5pMlwWV9sU36vAxJNomC4zMPSujn2j7mkdTOG_REKJpXTWiw14yideDgpHvu_SgdbLM16o4UQSBs_KRE1sMY_lpAZViWpWnJ9PcYeVqhcf8ekUZ_SsKpn7yt5LcEq_dpyoIIV9aYdUQYypl1G_pw0A4I9LcB';
-  static const String scanner2 =
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBvJmPX7sKq98YgUQj6EkI01gmT-Tv9tgLNNCkKfa6vp5iL1TxYh7wpTLgUOs4CcGN3Z3_iSqVY30f-62g695nDTZ0D9nq4svsMLdFnkinClLqk3HiMLx-wtyMrkWLTt92RmhygbIMr5lpgEeJP_doNbcCHO516iBOY9Dt-md77IUoOCDyQZ6jbmChpFu2CPk5RceBHTpVMKrTC1NhjNbJeIQtDk-v-BJI1a8Czjimt0LqjlYeZB9pwdzG0dhA64Ud53Y9k824BONr2';
-  static const String scanner3 =
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDr7d4B_DgLpc-1hveuU261eMnInn-OghBp31vVjdY7kDAU44UTgNNnR22PIO4pvjz5jYhYY9_k8i4ri9X9N7g8cVOt-aG9VxRVTz6VaGLAu69iT7vhCYRUnD5sQ-buW5gXdTSSKYoZNa-6fMuDkr9z3dz2wchc8YSHjLaF0WzOtJhljD5fugfZYPTuYpjDcHwcOo0RHKsdxci-jlOlFvqb4FibttZYIS8LwN9dA2PuJ_qvBYzJdyoBmiHTmsTUAc-hiAV_yfWLgSaZ';
-}
+class PrecisionDashboardPage extends StatefulWidget {
+  const PrecisionDashboardPage({super.key, required this.module});
 
-class PrecisionDashboardScreen extends StatefulWidget {
-  const PrecisionDashboardScreen({super.key});
+  final DashboardModule module;
 
   @override
-  State<PrecisionDashboardScreen> createState() => _PrecisionDashboardScreenState();
+  State<PrecisionDashboardPage> createState() => _PrecisionDashboardPageState();
 }
 
-class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
+class _PrecisionDashboardPageState extends State<PrecisionDashboardPage> {
   static const double _sideWidth = 320;
+
+  DashboardBundle? _bundle;
+  bool _loading = true;
 
   double _tpPercent = 3.5;
   double _slPercent = 1.2;
-  final TextEditingController _trailingCtrl = TextEditingController(text: '0.85');
+  final TextEditingController _trailingCtrl = TextEditingController();
   int _botPreset = 0;
   int _drawTool = 1;
 
   TextStyle get _headline => GoogleFonts.manrope(color: StitchColors.onSurface);
   TextStyle get _label => GoogleFonts.inter(color: StitchColors.onSurfaceVariant);
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final b = await widget.module.loadDashboard.call();
+    if (!mounted) return;
+    setState(() {
+      _bundle = b;
+      _loading = false;
+      _tpPercent = b.riskSettings.takeProfitPercent;
+      _slPercent = b.riskSettings.stopLossPercentMagnitude;
+      _trailingCtrl.text = b.riskSettings.trailingStopPercent.toString();
+      _botPreset = b.riskSettings.botSplit == BotSplitPreset.three ? 0 : 1;
+    });
+  }
+
+  RiskSettings _riskFromForm() {
+    final b = _bundle!;
+    final trailing = double.tryParse(_trailingCtrl.text) ?? b.riskSettings.trailingStopPercent;
+    return b.riskSettings.copyWith(
+      takeProfitPercent: _tpPercent,
+      stopLossPercentMagnitude: _slPercent,
+      trailingStopPercent: trailing,
+      botSplit: _botPreset == 0 ? BotSplitPreset.three : BotSplitPreset.five,
+    );
+  }
+
+  Future<void> _persistRisk() async {
+    await widget.module.updateRiskSettings.call(_riskFromForm());
+    await _load();
+  }
+
+  static String _formatKrw(int n) {
+    final s = n.toString();
+    final b = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
+      b.write(s[i]);
+    }
+    return b.toString();
+  }
+
+  ChartPriceLine? _priceLine(ChartPriceLineKind k) {
+    for (final e in _bundle!.priceLines) {
+      if (e.kind == k) return e;
+    }
+    return null;
+  }
+
+  String _pctUi(double p) => '${p >= 0 ? '+' : ''}${p.toStringAsFixed(1)}%';
+
+  Widget _scannerCardFromHit(ScannerHit hit) {
+    return _scannerCard(
+      badge: hit.badgeLabel,
+      badgeAccent: hit.badgeTone == ScannerBadgeTone.primary ? _BadgeAccent.primary : _BadgeAccent.tertiary,
+      title: hit.instrument.displayName,
+      pct: _pctUi(hit.changePercent),
+      price: '${_formatKrw(hit.lastPriceKrw)} 원',
+      chipRows: hit.chips.map((c) => _ChipData(c.label, _mapChipTone(c.tone))).toList(),
+      thumb: hit.thumbnailUri,
+      viLeftRail: hit.viHighlighted,
+    );
+  }
+
+  _ChipTone _mapChipTone(ScannerChipTone t) => switch (t) {
+        ScannerChipTone.primary => _ChipTone.primary,
+        ScannerChipTone.tertiary => _ChipTone.tertiary,
+        ScannerChipTone.muted => _ChipTone.muted,
+        ScannerChipTone.error => _ChipTone.error,
+      };
+
+  String _selectedInstrumentLabel() {
+    final sym = _bundle!.selectedSymbol;
+    for (final h in _bundle!.scannerHits) {
+      if (h.instrument.code.value == sym.value) {
+        return '${h.instrument.displayName} (${sym.value})';
+      }
+    }
+    return sym.value;
+  }
+
+  String _buyLinePrimaryLabel() {
+    final p = _priceLine(ChartPriceLineKind.primaryBuy);
+    return p != null ? '매수 @ KRW ${_formatKrw(p.priceKrw)}' : '매수';
+  }
+
+  String _buyLineAuto2Label() {
+    final p = _priceLine(ChartPriceLineKind.autoTier2);
+    if (p == null) return '오토-2';
+    final s = p.subtitle != null ? ' ${p.subtitle}' : '';
+    return '오토-2 @ KRW ${_formatKrw(p.priceKrw)}$s';
+  }
+
+  String _buyLineAuto3Label() {
+    final p = _priceLine(ChartPriceLineKind.autoTier3);
+    if (p == null) return '오토-3';
+    final s = p.subtitle != null ? ' ${p.subtitle}' : '';
+    return '오토-3 @ KRW ${_formatKrw(p.priceKrw)}$s';
+  }
 
   @override
   void dispose() {
@@ -44,6 +144,11 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading || _bundle == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       backgroundColor: StitchColors.surface,
       body: Stack(
@@ -69,7 +174,7 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
               ),
             ],
           ),
-          const _LatencyToast(),
+          _LatencyToast(telemetry: _bundle!.telemetry),
         ],
       ),
     );
@@ -221,42 +326,10 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
             child: ListView(
               padding: const EdgeInsets.all(12),
               children: [
-                _scannerCard(
-                  badge: '1000억/10%상승',
-                  badgeAccent: _BadgeAccent.primary,
-                  title: '삼성전자',
-                  pct: '+12.4%',
-                  price: '78,400 원',
-                  chipRows: const [
-                    _ChipData('테마주', _ChipTone.tertiary),
-                    _ChipData('KOSPI', _ChipTone.muted),
-                  ],
-                  thumb: StitchImageUrls.scanner1,
-                ),
-                const SizedBox(height: 12),
-                _scannerCard(
-                  badge: '5000억 양봉',
-                  badgeAccent: _BadgeAccent.tertiary,
-                  title: '에코프로비엠',
-                  pct: '+8.2%',
-                  price: '245,500 원',
-                  chipRows: const [
-                    _ChipData('주도주', _ChipTone.primary),
-                    _ChipData('KOSDAQ', _ChipTone.muted),
-                  ],
-                  thumb: StitchImageUrls.scanner2,
-                ),
-                const SizedBox(height: 12),
-                _scannerCard(
-                  badge: 'VI 포착',
-                  badgeAccent: _BadgeAccent.primary,
-                  title: '현대차',
-                  pct: '+15.1%',
-                  price: '212,000 원',
-                  chipRows: const [_ChipData('HIGH VOL', _ChipTone.error)],
-                  thumb: StitchImageUrls.scanner3,
-                  viLeftRail: true,
-                ),
+                for (var i = 0; i < _bundle!.scannerHits.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 12),
+                  _scannerCardFromHit(_bundle!.scannerHits[i]),
+                ],
               ],
             ),
           ),
@@ -600,7 +673,7 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
               Opacity(
                 opacity: 0.5,
                 child: Image.network(
-                  StitchImageUrls.chartMain,
+                  _bundle!.chartBackgroundUri.isNotEmpty ? _bundle!.chartBackgroundUri : RemoteChartAssets.chartMain,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => ColoredBox(color: StitchColors.chartBackdrop),
                 ),
@@ -613,9 +686,9 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
                   ),
                 ),
               ),
-              _buyLineLabel(h: h, yFrac: 0.65, label: '매수 @ KRW 210,500', emphasized: true),
-              _buyLineLabel(h: h, yFrac: 0.72, label: '오토-2 @ KRW 208,400 (-1.0%)', opacity: 0.85),
-              _buyLineLabel(h: h, yFrac: 0.78, label: '오토-3 @ KRW 206,300 (-2.0%)', opacity: 0.65),
+              _buyLineLabel(h: h, yFrac: 0.65, label: _buyLinePrimaryLabel(), emphasized: true),
+              _buyLineLabel(h: h, yFrac: 0.72, label: _buyLineAuto2Label(), opacity: 0.85),
+              _buyLineLabel(h: h, yFrac: 0.78, label: _buyLineAuto3Label(), opacity: 0.65),
               _sellTargetBanner(h: h, yFrac: 0.25),
               _viMarkerColumn(w: w, h: h, rightFrac: 0.3, yFrac: 0.4),
               Positioned(
@@ -640,7 +713,7 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  '현대차 (005380)',
+                                  _selectedInstrumentLabel(),
                                   style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700),
                                 ),
                               ),
@@ -671,7 +744,7 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
                                 color: StitchColors.primaryContainer,
                               ),
                               children: [
-                                const TextSpan(text: '212,000 '),
+                                TextSpan(text: '${_formatKrw(_bundle!.ohlc.closeKrw)} '),
                                 TextSpan(
                                   text: 'KRW',
                                   style: GoogleFonts.manrope(
@@ -699,7 +772,9 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '210,500',
+                                _formatKrw(
+                                  _priceLine(ChartPriceLineKind.primaryBuy)?.priceKrw ?? _bundle!.ohlc.openKrw,
+                                ),
                                 style: GoogleFonts.inter(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w900,
@@ -771,6 +846,8 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
   }
 
   Widget _sellTargetBanner({required double h, required double yFrac}) {
+    final p = _priceLine(ChartPriceLineKind.sellTarget);
+    final bannerText = p != null ? '목표 매도 @ KRW ${_formatKrw(p.priceKrw)}' : '목표 매도';
     return Positioned(
       left: 0,
       right: 0,
@@ -789,7 +866,7 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
                 boxShadow: [BoxShadow(color: StitchColors.error.withOpacity(0.15), blurRadius: 12)],
               ),
               child: Text(
-                '목표 매도 @ KRW 218,000',
+                bannerText,
                 style: GoogleFonts.inter(
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
@@ -842,6 +919,7 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
   }
 
   Widget _ohlcLegend() {
+    final o = _bundle!.ohlc;
     Widget ohlcKV(String k, String val, {Color? highlight}) {
       return Text.rich(
         TextSpan(
@@ -876,17 +954,17 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
       ),
       child: Row(
         children: [
-          ohlcKV('O', '210,500'),
+          ohlcKV('O', _formatKrw(o.openKrw)),
           const SizedBox(width: 16),
-          ohlcKV('H', '214,000'),
+          ohlcKV('H', _formatKrw(o.highKrw)),
           const SizedBox(width: 16),
-          ohlcKV('L', '209,000'),
+          ohlcKV('L', _formatKrw(o.lowKrw)),
           const SizedBox(width: 16),
-          ohlcKV('C', '212,000'),
+          ohlcKV('C', _formatKrw(o.closeKrw)),
           const SizedBox(width: 24),
           Container(width: 1, height: 12, color: StitchColors.outlineVariant.withOpacity(0.3)),
           const SizedBox(width: 16),
-          ohlcKV('Vol', '1.2조', highlight: StitchColors.primaryContainer),
+          ohlcKV('Vol', o.volumeDescription, highlight: StitchColors.primaryContainer),
           const SizedBox(width: 16),
           Text.rich(
             TextSpan(
@@ -894,7 +972,7 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
               children: [
                 TextSpan(text: '틱 스냅: ', style: TextStyle(letterSpacing: 0.5)),
                 TextSpan(
-                  text: '100 KRW',
+                  text: '${_formatKrw(o.tickSizeKrw)} KRW',
                   style: TextStyle(color: StitchColors.onSurface, fontWeight: FontWeight.w700),
                 ),
               ],
@@ -941,7 +1019,7 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          'ACTIVE LINE SYNC',
+                          _bundle!.autoWatch.lineSyncActive ? 'ACTIVE LINE SYNC' : 'LINE SYNC OFF',
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
@@ -956,11 +1034,10 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(child: _statusTile(icon: Icons.visibility_outlined, label: '감시 중', active: true)),
-                    const SizedBox(width: 8),
-                    Expanded(child: _statusTile(icon: Icons.check_circle_outline, label: '조건 도달', dim: true)),
-                    const SizedBox(width: 8),
-                    Expanded(child: _statusTile(icon: Icons.flash_on_outlined, label: '체결됨', dim: true)),
+                    for (var i = 0; i < _bundle!.autoWatch.phases.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Expanded(child: _statusTileForPhase(_bundle!.autoWatch.phases[i])),
+                    ],
                   ],
                 ),
               ],
@@ -1015,6 +1092,7 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
                   activeColor: StitchColors.primaryContainer,
                   inactiveColor: StitchColors.surfaceContainerHighest,
                   onChanged: (v) => setState(() => _tpPercent = v),
+                  onChangeEnd: (_) => _persistRisk(),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1034,6 +1112,7 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
                   activeColor: StitchColors.error,
                   inactiveColor: StitchColors.surfaceContainerHighest,
                   onChanged: (v) => setState(() => _slPercent = v),
+                  onChangeEnd: (_) => _persistRisk(),
                 ),
                 const SizedBox(height: 8),
                 Text('트레일링 스톱 (%)', style: _label.copyWith(fontSize: 10, fontWeight: FontWeight.w700)),
@@ -1043,6 +1122,7 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
                   children: [
                     TextField(
                       controller: _trailingCtrl,
+                      onEditingComplete: _persistRisk,
                       style: GoogleFonts.manrope(
                         fontWeight: FontWeight.w700,
                         color: StitchColors.primaryContainer,
@@ -1191,6 +1271,20 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
     );
   }
 
+  Widget _statusTileForPhase(AutoWatchPhaseState phase) {
+    final (icon, label) = switch (phase.kind) {
+      AutoWatchPhaseKind.monitoring => (Icons.visibility_outlined, '감시 중'),
+      AutoWatchPhaseKind.conditionMet => (Icons.check_circle_outline, '조건 도달'),
+      AutoWatchPhaseKind.orderFilled => (Icons.flash_on_outlined, '체결됨'),
+    };
+    return _statusTile(
+      icon: icon,
+      label: label,
+      active: phase.isActive,
+      dim: !phase.isActive,
+    );
+  }
+
   Widget _statusTile({required IconData icon, required String label, bool active = false, bool dim = false}) {
     final o = dim ? 0.35 : 1.0;
     return Opacity(
@@ -1247,7 +1341,10 @@ class _PrecisionDashboardScreenState extends State<PrecisionDashboardScreen> {
   Widget _botPresetBtn(String label, int index) {
     final on = _botPreset == index;
     return OutlinedButton(
-      onPressed: () => setState(() => _botPreset = index),
+      onPressed: () async {
+        setState(() => _botPreset = index);
+        await _persistRisk();
+      },
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 8),
         backgroundColor: on ? StitchColors.surface : StitchColors.surfaceContainerLowest,
@@ -1347,7 +1444,9 @@ class _VerticalDashedPainter extends CustomPainter {
 }
 
 class _LatencyToast extends StatelessWidget {
-  const _LatencyToast();
+  const _LatencyToast({required this.telemetry});
+
+  final SessionTelemetry telemetry;
 
   @override
   Widget build(BuildContext context) {
@@ -1375,7 +1474,7 @@ class _LatencyToast extends StatelessWidget {
                     Icon(Icons.settings_input_antenna_outlined, size: 18, color: StitchColors.primaryContainer),
                     const SizedBox(width: 12),
                     Text(
-                      '지연시간: 14ms',
+                      '지연시간: ${telemetry.roundTripLatencyMs}ms',
                       style: GoogleFonts.manrope(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -1387,7 +1486,7 @@ class _LatencyToast extends StatelessWidget {
                     Container(width: 1, height: 12, color: StitchColors.outlineVariant.withOpacity(0.3)),
                     const SizedBox(width: 12),
                     Text(
-                      'API: OPEN-0624-V4',
+                      'API: ${telemetry.apiLabel}',
                       style: GoogleFonts.manrope(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -1399,7 +1498,7 @@ class _LatencyToast extends StatelessWidget {
                     Container(width: 1, height: 12, color: StitchColors.outlineVariant.withOpacity(0.3)),
                     const SizedBox(width: 12),
                     Text(
-                      '틱 단위 스냅 적용',
+                      telemetry.tickSnapApplied ? '틱 단위 스냅 적용' : '틱 스냅 미적용',
                       style: GoogleFonts.manrope(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,

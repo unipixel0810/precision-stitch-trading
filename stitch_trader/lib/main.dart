@@ -1,18 +1,28 @@
-// 진입점: Clean Architecture 이행은 docs/PHASE0_BASELINE.md 참고.
-// P3 이전까지 화면은 lib/screens/, 테마는 lib/theme/ (이후 lib/presentation/).
+// 진입점: composition root에서 환경별 저장소 → DashboardModule → 화면 주입.
+// 레이어 규칙은 루트 rule.md, 기준선은 docs/PHASE0_BASELINE.md 참고.
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import 'screens/precision_dashboard_screen.dart';
-import 'theme/stitch_colors.dart';
+import 'package:stitch_trader/app/app_environment.dart';
+import 'package:stitch_trader/app/dashboard_module.dart';
+import 'package:stitch_trader/app/dashboard_repository_factory.dart';
+import 'package:stitch_trader/domain/dashboard_contracts.dart';
+import 'package:stitch_trader/presentation/pages/precision_dashboard_page.dart';
+import 'package:stitch_trader/presentation/theme/stitch_colors.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const StitchTraderApp());
+  final repos = DashboardRepositoryFactory.create(AppEnvironment.development);
+  final module = DashboardModule.fromRepositories(
+    repos,
+    defaultSymbol: SymbolCode('005380'),
+  );
+  runApp(StitchTraderApp(dashboardModule: module));
 }
 
 class StitchTraderApp extends StatelessWidget {
-  const StitchTraderApp({super.key});
+  const StitchTraderApp({super.key, required this.dashboardModule});
+
+  final DashboardModule dashboardModule;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +46,7 @@ class StitchTraderApp extends StatelessWidget {
         textTheme: display,
         iconTheme: const IconThemeData(color: StitchColors.onSurfaceVariant),
       ),
-      home: const PrecisionDashboardScreen(),
+      home: PrecisionDashboardPage(module: dashboardModule),
     );
   }
 }

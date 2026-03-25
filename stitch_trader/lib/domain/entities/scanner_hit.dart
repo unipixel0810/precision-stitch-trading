@@ -3,13 +3,15 @@ import 'instrument.dart';
 /// 스캐너 배지 톤 (UI 색 분기용, presentation에서 매핑).
 enum ScannerBadgeTone { primary, tertiary }
 
+/// 스캐너 칩 색 분기 (presentation에서 `design.md` 톤에 매핑).
+enum ScannerChipTone { primary, tertiary, muted, error }
+
 /// 스캐너 카드 보조 태그 (테마주, KOSPI 등).
 final class ScannerChip {
-  const ScannerChip({required this.label, required this.emphasis});
+  const ScannerChip({required this.label, required this.tone});
 
   final String label;
-  /// true면 경고·강조(High Vol 등) 계열로 그릴 수 있음.
-  final bool emphasis;
+  final ScannerChipTone tone;
 }
 
 /// 스캐너 한 줄(카드) 도메인 표현.
